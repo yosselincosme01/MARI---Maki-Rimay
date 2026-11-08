@@ -15,6 +15,8 @@ beforeEach(() => {
   // jsdom no reproduce video.
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+  // jsdom no tiene WebGL: P2 usa la lista de zonas, que es el respaldo del cuerpo 3D (CUE2).
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
 })
 
 // Vitest corre sin `globals`, así que Testing Library no limpia sola entre tests.
