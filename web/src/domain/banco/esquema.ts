@@ -99,6 +99,9 @@ export const esquemaBanco = z
       if (p.iniciaCiclo && p.porCiclo) {
         error('Una pregunta no puede iniciar ciclo y guardarse por ciclo a la vez', base)
       }
+      if (p.iniciaCiclo && p.multiple) {
+        error('La pregunta que inicia ciclo define un solo síntoma: no puede ser múltiple', base)
+      }
 
       if (p.grupo === 'flujo' && !p.siguiente) {
         error('Las preguntas del flujo necesitan reglas "siguiente"', base)

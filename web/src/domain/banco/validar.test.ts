@@ -121,6 +121,12 @@ describe('validarBanco', () => {
     expect(errores(banco).join()).toMatch(/"nuevoCiclo" debe ir a una pregunta que inicia ciclo/)
   })
 
+  it('la pregunta que inicia ciclo no puede ser múltiple', () => {
+    const banco = bancoBase()
+    banco.preguntas[0]!.multiple = true
+    expect(errores(banco).join()).toMatch(/no puede ser múltiple/)
+  })
+
   it('reserva OTRA para "permiteOtra"', () => {
     const banco = bancoBase()
     banco.preguntas[1]!.opciones = [{ valor: 'OTRA', etiqueta: 'Otra' }]
