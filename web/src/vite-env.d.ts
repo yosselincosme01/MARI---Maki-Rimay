@@ -4,7 +4,7 @@
 interface ImportMetaEnv {
   /** Activa /recolector (M3). Nunca en la demo pública. */
   readonly VITE_RECOLECTOR?: string
-  /** Reproduce videos no validados con su etiqueta (DEM). */
+  /** "true" reproduce los videos no validados con la etiqueta "Video no validado" (§5.5). */
   readonly VITE_DEMO?: string
 }
 
