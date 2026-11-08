@@ -7,10 +7,25 @@
 import { createContext, useContext } from 'react'
 import { useStore } from 'zustand'
 import type { Consulta, StoreConsulta } from '@/application/consulta/crear-consulta'
+import type { Reconocedor } from '@/application/puertos/reconocedor'
 import type { Banco } from '@/domain/banco/tipos'
 
+/**
+ * Cómo se reconocen las señas:
+ * - "simulado": no hay reconocimiento; la persona responde tocando ("reconocimiento pendiente").
+ * - "presentacion": cámara y MediaPipe reales; la seña la elige quien opera la demo.
+ */
+export type ModoReconocimiento = 'simulado' | 'presentacion'
+
 export type RecursosConsulta =
-  | { ok: true; banco: Banco; consulta: StoreConsulta; modoDemo: boolean }
+  | {
+      ok: true
+      banco: Banco
+      consulta: StoreConsulta
+      modoDemo: boolean
+      reconocedor?: Reconocedor
+      reconocimiento?: ModoReconocimiento
+    }
   /** El banco no es válido: la interfaz muestra los errores y no inicia la consulta (BAN1). */
   | { ok: false; errores: string[]; modoDemo: boolean }
 
@@ -39,4 +54,12 @@ export function useConsulta(): Consulta {
 
 export function useModoDemo(): boolean {
   return useRecursos().modoDemo
+}
+
+/** El reconocedor de señas y su modo. Sin reconocedor, el modo es "simulado". */
+export function useReconocimiento(): { reconocedor: Reconocedor | null; modo: ModoReconocimiento } {
+  const recursos = useRecursosValidos()
+  return recursos.reconocedor
+    ? { reconocedor: recursos.reconocedor, modo: recursos.reconocimiento ?? 'simulado' }
+    : { reconocedor: null, modo: 'simulado' }
 }
