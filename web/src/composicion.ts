@@ -5,7 +5,9 @@
 import { crearConsulta } from '@/application/consulta/crear-consulta'
 import { crearMotor } from '@/domain/flujo/motor-banco'
 import { cargarBanco } from '@/infrastructure/banco-json/cargarBanco'
+import { crearReconocedorPresentacion } from '@/infrastructure/senas/reconocedor-presentacion'
 import { crearGrabadorSimulado } from '@/infrastructure/simuladores/grabador-simulado'
+import { crearReconocedorSimulado } from '@/infrastructure/simuladores/reconocedor-simulado'
 import type { RecursosConsulta } from '@/ui/consulta/contexto'
 
 export function crearRecursos(): RecursosConsulta {
@@ -20,5 +22,11 @@ export function crearRecursos(): RecursosConsulta {
     generarId: () => crypto.randomUUID(),
     ahora: () => new Date(),
   })
-  return { ok: true, banco: resultado.banco, consulta, modoDemo }
+  // El modelo real reemplazará a estos adaptadores sin tocar la interfaz.
+  const reconocimiento =
+    import.meta.env.VITE_RECONOCEDOR === 'presentacion' ? 'presentacion' : 'simulado'
+  const reconocedor =
+    reconocimiento === 'presentacion' ? crearReconocedorPresentacion() : crearReconocedorSimulado()
+
+  return { ok: true, banco: resultado.banco, consulta, modoDemo, reconocedor, reconocimiento }
 }

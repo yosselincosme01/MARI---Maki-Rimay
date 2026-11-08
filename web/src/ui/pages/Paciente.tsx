@@ -1,11 +1,18 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Hand, HandHelping, Siren, Stethoscope, TriangleAlert } from 'lucide-react'
+import { CamaraSenas } from '@/ui/components/CamaraSenas'
 import { Confirmacion } from '@/ui/components/Confirmacion'
 import { Logo } from '@/ui/components/Logo'
 import { Respuestas } from '@/ui/components/Respuestas'
 import { VideoLSP } from '@/ui/components/VideoLSP'
-import { useBanco, useConsulta, useModoDemo, useRecursos } from '@/ui/consulta/contexto'
+import {
+  useBanco,
+  useConsulta,
+  useModoDemo,
+  useReconocimiento,
+  useRecursos,
+} from '@/ui/consulta/contexto'
 
 /**
  * Vista del paciente (PAC). Muestra una sola cosa a la vez según la fase de la consulta:
@@ -70,6 +77,9 @@ function PreguntaActiva() {
   const banco = useBanco()
   const modoDemo = useModoDemo()
   const { preguntaActiva, provisional, proponer, confirmar, descartar } = useConsulta()
+  const { reconocedor, modo } = useReconocimiento()
+  // Se recuerda entre preguntas: si la persona activó la cámara, sigue activa.
+  const [camaraActiva, setCamaraActiva] = useState(false)
   const pregunta = banco.preguntas.find((p) => p.id === preguntaActiva)
 
   if (!pregunta) {
@@ -98,7 +108,19 @@ function PreguntaActiva() {
             {pregunta.texto}
           </h1>
         </section>
-        <section aria-label="Tu respuesta">
+        <section aria-label="Tu respuesta" className="flex flex-col gap-4">
+          {pregunta.tipo === 'sena' && reconocedor && modo !== 'simulado' && (
+            <CamaraSenas
+              reconocedor={reconocedor}
+              pregunta={pregunta}
+              alResponder={proponer}
+              escuchando={provisional === null}
+              activa={camaraActiva}
+              alActivar={() => setCamaraActiva(true)}
+              alApagar={() => setCamaraActiva(false)}
+              simulado={modo === 'presentacion'}
+            />
+          )}
           {provisional ? (
             <Confirmacion
               pregunta={pregunta}
@@ -107,7 +129,11 @@ function PreguntaActiva() {
               alDescartar={descartar}
             />
           ) : (
-            <Respuestas pregunta={pregunta} alResponder={proponer} />
+            <Respuestas
+              pregunta={pregunta}
+              alResponder={proponer}
+              conCamara={pregunta.tipo === 'sena' && modo !== 'simulado'}
+            />
           )}
         </section>
       </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera, Check, CircleHelp } from 'lucide-react'
+import { Camera, Check, CircleHelp, Hand } from 'lucide-react'
 import type { Opcion, Origen, Pregunta, RespuestaProvisional } from '@/domain/banco/tipos'
 import { VALOR_OTRA } from '@/domain/banco/esquema'
 import { ETIQUETA_OTRA, urlPublica } from '@/ui/consulta/recursos'
@@ -7,6 +7,8 @@ import { ETIQUETA_OTRA, urlPublica } from '@/ui/consulta/recursos'
 interface RespuestasProps {
   pregunta: Pregunta
   alResponder: (respuesta: RespuestaProvisional) => void
+  /** Hay cámara para responder con señas: las opciones táctiles son la alternativa. */
+  conCamara?: boolean
 }
 
 /**
@@ -16,19 +18,24 @@ interface RespuestasProps {
  * - "cuerpo": lista de zonas; es el respaldo del cuerpo 3D (CUE), que llega en la fase b.
  * La respuesta queda provisional: la persona la confirma después con ✓.
  */
-export function Respuestas({ pregunta, alResponder }: RespuestasProps) {
+export function Respuestas({ pregunta, alResponder, conCamara = false }: RespuestasProps) {
   const origen: Origen = pregunta.tipo === 'cuerpo' ? 'cuerpo' : 'tactil'
   const proponer = (valor: string | string[]) =>
     alResponder({ preguntaId: pregunta.id, valor, origen })
 
   return (
     <div className="flex flex-col gap-4">
-      {pregunta.tipo === 'sena' && (
-        <p className="text-tinta/70 flex items-center gap-2 text-sm">
-          <Camera size={20} aria-hidden /> Responder con señas: reconocimiento pendiente. Toca una
-          opción.
-        </p>
-      )}
+      {pregunta.tipo === 'sena' &&
+        (conCamara ? (
+          <p className="text-tinta/70 flex items-center gap-2 text-sm">
+            <Hand size={20} aria-hidden /> O toca una opción.
+          </p>
+        ) : (
+          <p className="text-tinta/70 flex items-center gap-2 text-sm">
+            <Camera size={20} aria-hidden /> Responder con señas: reconocimiento pendiente. Toca una
+            opción.
+          </p>
+        ))}
 
       {pregunta.multiple ? (
         <OpcionesMultiples opciones={pregunta.opciones} alListo={proponer} />
