@@ -1,4 +1,5 @@
 # Datos de entrenamiento y grabaciones: nunca al repositorio
+ml/data/
 ml/datos/
 ml/.venv/
 *.webm
