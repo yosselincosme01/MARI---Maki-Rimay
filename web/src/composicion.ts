@@ -5,6 +5,7 @@
 import { crearConsulta } from '@/application/consulta/crear-consulta'
 import { crearMotor } from '@/domain/flujo/motor-banco'
 import { cargarBanco } from '@/infrastructure/banco-json/cargarBanco'
+import { crearBuscadorTexto } from '@/infrastructure/busqueda/buscador-texto'
 import { crearReconocedorPresentacion } from '@/infrastructure/senas/reconocedor-presentacion'
 import { crearGrabadorSimulado } from '@/infrastructure/simuladores/grabador-simulado'
 import { crearReconocedorSimulado } from '@/infrastructure/simuladores/reconocedor-simulado'
@@ -28,5 +29,16 @@ export function crearRecursos(): RecursosConsulta {
   const reconocedor =
     reconocimiento === 'presentacion' ? crearReconocedorPresentacion() : crearReconocedorSimulado()
 
-  return { ok: true, banco: resultado.banco, consulta, modoDemo, reconocedor, reconocimiento }
+  // Búsqueda de repreguntas por texto, en el dispositivo (BUS4).
+  const buscador = crearBuscadorTexto(resultado.banco)
+
+  return {
+    ok: true,
+    banco: resultado.banco,
+    consulta,
+    modoDemo,
+    reconocedor,
+    reconocimiento,
+    buscador,
+  }
 }
