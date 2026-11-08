@@ -289,7 +289,7 @@ function ConsultaEnCurso() {
           role="status"
           className="border-marca/30 bg-marca-suave rounded-tarjeta flex flex-col gap-2 border p-4"
         >
-          <p className="text-marca flex items-center gap-2 font-semibold">
+          <p className="text-marca-oscuro flex items-center gap-2 font-semibold">
             <MessageSquareReply size={18} aria-hidden /> La persona respondió
           </p>
           <ul className="flex flex-col gap-1">
@@ -315,17 +315,18 @@ function ConsultaEnCurso() {
         </section>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-24">
           <Preguntar alEnviar={() => void navegar('/paciente')} />
         </div>
 
         <section aria-labelledby="titulo-resumen" className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3">
             <h2 id="titulo-resumen" className="text-xl">
               Resumen
             </h2>
-            <div className="flex flex-wrap gap-2">
+            {/* Los botones se estiran: si no caben en una fila, el salto se ve ordenado. */}
+            <div className="flex flex-wrap gap-2 [&>*]:flex-1">
               <Boton tamano="md" onClick={descargar} disabled={ocupado || !resumen}>
                 <Download size={18} aria-hidden /> Descargar PDF
               </Boton>

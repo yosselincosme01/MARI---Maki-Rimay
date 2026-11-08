@@ -15,7 +15,7 @@ export const estilosBoton = cva(
         exito: 'bg-cruz text-white shadow-tarjeta hover:brightness-95',
         secundario:
           'border border-borde bg-superficie text-tinta shadow-tarjeta hover:border-tinta/30 hover:bg-superficie-2',
-        fantasma: 'text-marca hover:bg-marca-suave',
+        fantasma: 'text-marca-oscuro hover:bg-marca-suave',
         peligro: 'border border-alerta/30 bg-superficie text-alerta hover:bg-alerta-suave',
       },
       tamano: {

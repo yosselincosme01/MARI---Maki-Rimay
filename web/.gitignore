@@ -32,3 +32,8 @@ grabaciones/
 
 # MediaPipe: se recrea con "npm run mediapipe" (wasm de node_modules + modelos verificados)
 public/mediapipe/
+
+# Pruebas de punta a punta (Playwright)
+playwright-report
+test-results
+capturas

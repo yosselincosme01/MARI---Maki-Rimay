@@ -143,17 +143,23 @@ export default function Cuerpo3D({ zona, alTocar, alFallar }: Cuerpo3DProps) {
     let activo = true
     const dibujar = () => renderer.render(escena, camara)
 
+    let anchoActual = -1
     const ajustarTamano = () => {
       // Todo el ancho de la tarjeta; el alto no pasa del 46 % de la pantalla (cabe en tablet).
       const { width } = div.getBoundingClientRect()
+      // Cambiar el alto del lienzo vuelve a avisar al observador: solo se redibuja si cambió el
+      // ancho (si no, el navegador avisa "ResizeObserver loop").
+      if (Math.round(width) === anchoActual) return
+      anchoActual = Math.round(width)
       const alto = Math.round(Math.min(width * 1.05, window.innerHeight * 0.46))
       renderer.setSize(width, alto, false)
-      Object.assign(renderer.domElement.style, { width: `${width}px`, height: `${alto}px` })
+      // Ancho en % (no en px): así el lienzo nunca empuja a su contenedor a crecer.
+      Object.assign(renderer.domElement.style, { width: '100%', height: `${alto}px` })
       camara.aspect = width / alto
       camara.updateProjectionMatrix()
       dibujar()
     }
-    const observador = new ResizeObserver(ajustarTamano)
+    const observador = new ResizeObserver(() => requestAnimationFrame(ajustarTamano))
     observador.observe(div)
 
     controles.current = {

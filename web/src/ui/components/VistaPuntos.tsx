@@ -177,10 +177,10 @@ export function VistaPuntos({ alFotograma, alListo, superposicion }: VistaPuntos
             texto="Mano izquierda"
             color="bg-[#f4a86a]"
           />
-          <span className="text-tinta/60 ml-auto">{fps} fps</span>
+          <span className="text-tinta-suave ml-auto">{fps} fps</span>
           <button
             onClick={() => setEncendida(false)}
-            className="text-tinta/70 hover:text-tinta flex items-center gap-1"
+            className="text-tinta-suave hover:text-tinta flex items-center gap-1"
           >
             <CameraOff size={16} aria-hidden /> Apagar
           </button>

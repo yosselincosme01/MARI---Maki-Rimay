@@ -31,14 +31,14 @@ export function DocumentoResumen({
     >
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-black/10 pb-4">
         <div>
-          <p className="text-marca flex items-center gap-2 font-semibold">
+          <p className="text-marca-oscuro flex items-center gap-2 font-semibold">
             <Stethoscope size={20} aria-hidden /> Para el profesional
           </p>
-          <p className="text-tinta/60 mt-1 text-sm">
+          <p className="text-tinta-suave mt-1 text-sm">
             Información referida por la persona usuaria de LSP
           </p>
         </div>
-        <p className="text-tinta/60 text-sm tabular-nums">{fechaHora(generado)}</p>
+        <p className="text-tinta-suave text-sm tabular-nums">{fechaHora(generado)}</p>
       </header>
 
       <DeUnVistazo resumen={resumen} />
@@ -55,7 +55,7 @@ export function DocumentoResumen({
 
       <Seccion titulo="Síntomas referidos">
         {resumen.sintomas.length === 0 ? (
-          <p className="text-tinta/60 italic">No especificado.</p>
+          <p className="text-tinta-suave italic">No especificado.</p>
         ) : (
           <ul className="space-y-4">
             {resumen.sintomas.map((s, i) => (
@@ -63,7 +63,7 @@ export function DocumentoResumen({
                 <p className="font-medium">{s.linea}</p>
                 <Datos datos={s.datos} resaltar={resaltarFaltantes} />
                 {s.detalles.length > 0 && (
-                  <ul className="text-tinta/80 border-marca-claro mt-2 space-y-1 border-l-2 pl-3 text-[0.95rem]">
+                  <ul className="text-tinta border-marca-claro mt-2 space-y-1 border-l-2 pl-3 text-[0.95rem]">
                     {s.detalles.map((d, j) => (
                       <li key={j}>{d}</li>
                     ))}
@@ -99,7 +99,7 @@ export function DocumentoResumen({
         </Seccion>
       )}
 
-      <footer className="text-tinta/60 mt-6 border-t border-black/10 pt-4 text-sm">
+      <footer className="text-tinta-suave mt-6 border-t border-black/10 pt-4 text-sm">
         {resumen.cierre}
       </footer>
     </article>
@@ -110,7 +110,7 @@ export function DocumentoResumen({
 function DeUnVistazo({ resumen }: { resumen: Resumen }) {
   const alerta = resumen.alerta.estado
   return (
-    <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+    <dl className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
       <Tarjeta
         icono={<Siren size={18} aria-hidden />}
         etiqueta="Alerta inicial"
@@ -151,11 +151,11 @@ function Tarjeta({
     destacado: 'bg-marca text-white',
   }[tono]
   return (
-    <div className={`rounded-2xl px-4 py-3 ${estilos}`}>
-      <dt className="flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase opacity-80">
+    <div className={`min-w-0 rounded-2xl px-4 py-3 ${estilos}`}>
+      <dt className="flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
         {icono} {etiqueta}
       </dt>
-      <dd className="mt-1 text-lg font-bold">{valor}</dd>
+      <dd className="mt-1 text-base leading-snug font-bold break-words">{valor}</dd>
     </div>
   )
 }
@@ -178,14 +178,14 @@ function Datos({ datos, resaltar }: { datos: Dato[]; resaltar: boolean }) {
     <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-[0.95rem] sm:grid-cols-[minmax(9rem,auto)_1fr]">
       {datos.map((d, i) => (
         <div key={i} className="contents">
-          <dt className="text-tinta/60">{d.etiqueta}</dt>
+          <dt className="text-tinta-suave">{d.etiqueta}</dt>
           <dd>
             {d.valor !== null ? (
               d.valor
             ) : resaltar ? (
               <Faltante>{NO_ESPECIFICADO}</Faltante>
             ) : (
-              <span className="text-tinta/50 italic">{NO_ESPECIFICADO}</span>
+              <span className="text-tinta-suave italic">{NO_ESPECIFICADO}</span>
             )}
           </dd>
         </div>
@@ -213,7 +213,7 @@ export function Originales({ resumen }: { resumen: Resumen }) {
       </summary>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[32rem] text-left text-sm">
-          <thead className="text-tinta/60">
+          <thead className="text-tinta-suave">
             <tr>
               <th className="py-1 pr-3 font-medium">Hora</th>
               <th className="py-1 pr-3 font-medium">Pregunta</th>

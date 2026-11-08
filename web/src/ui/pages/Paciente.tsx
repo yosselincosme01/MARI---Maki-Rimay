@@ -155,7 +155,7 @@ function PreguntaActiva() {
       }
     >
       {/* Tablet horizontal: video | respuesta. En móvil se apilan (PAC3). */}
-      <div className="grid flex-1 items-start gap-6 md:grid-cols-2 lg:gap-10">
+      <div className="grid flex-1 grid-cols-1 items-start gap-6 md:grid-cols-2 lg:gap-10">
         <section aria-labelledby="pregunta" className="flex flex-col gap-4">
           <h1 id="pregunta" className="text-2xl sm:text-3xl">
             {pregunta.texto}

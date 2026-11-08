@@ -168,7 +168,7 @@ export function CamaraSenas(props: CamaraSenasProps) {
           <button
             type="button"
             onClick={alApagar}
-            className="text-tinta/60 hover:text-tinta flex items-center gap-1"
+            className="text-tinta-suave hover:text-tinta flex items-center gap-1"
           >
             <CameraOff size={16} aria-hidden /> Apagar cámara
           </button>
