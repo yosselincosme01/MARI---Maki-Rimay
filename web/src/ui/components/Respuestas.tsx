@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
-import { Camera, Check, CircleHelp, Hand, List, PersonStanding } from 'lucide-react'
+import { ArrowRight, Camera, Check, CircleHelp, Eraser, Hand } from 'lucide-react'
 import type { Opcion, Origen, Pregunta, RespuestaProvisional } from '@/domain/banco/tipos'
 import { VALOR_OTRA } from '@/domain/banco/esquema'
 import { cn } from '@/ui/cn'
 import { Boton } from '@/ui/components/base/Boton'
-import { ETIQUETA_OTRA, urlPublica } from '@/ui/consulta/recursos'
+import { ETIQUETA_OTRA } from '@/ui/consulta/recursos'
 import type { Cuerpo3DProps } from './Cuerpo3D/Cuerpo3D'
+import { Barras, SiluetaZona, Simbolo } from './simbolos/Simbolo'
+import { simboloDe } from './simbolos/simbolos'
 
 /** three.js y el modelo se descargan solo al llegar a P2. Si la descarga falla, se usa la lista. */
 const Cuerpo3D = lazy<ComponentType<Cuerpo3DProps>>(() =>
@@ -39,8 +41,8 @@ interface RespuestasProps {
 
 /**
  * Respuestas táctiles (OPC). Cada opción sale del banco y produce un valor permitido.
- * - Con pictograma: tarjetas con la imagen grande, para responder casi sin leer.
- * - Sin pictograma: filas de texto compactas.
+ * Toda opción lleva un símbolo (pictograma, silueta, días o barras) para quien no lee;
+ * el texto acompaña y es el nombre accesible del botón.
  * - "escala": la intensidad se distingue por la cantidad de barras, no solo por color (OPC2).
  * - "cuerpo": cuerpo 3D (CUE1), con la lista de zonas como respaldo y alternativa (CUE2).
  * La respuesta queda provisional: la persona la confirma después con ✓.
@@ -53,18 +55,24 @@ export function Respuestas({ pregunta, alResponder, conCamara = false }: Respues
   return (
     <div className="flex flex-col gap-3">
       {pregunta.multiple ? (
-        <OpcionesMultiples opciones={pregunta.opciones} alListo={proponer} />
+        <OpcionesMultiples pregunta={pregunta} alListo={proponer} />
       ) : pregunta.tipo === 'escala' ? (
         <Escala opciones={pregunta.opciones} alElegir={proponer} />
       ) : pregunta.tipo === 'cuerpo' ? (
-        <RespuestaCuerpo opciones={pregunta.opciones} alElegir={proponer} />
+        <RespuestaCuerpo pregunta={pregunta} alElegir={proponer} />
       ) : (
-        <GrillaOpciones opciones={pregunta.opciones} alElegir={proponer} />
+        <GrillaOpciones pregunta={pregunta} alElegir={proponer} />
       )}
 
       {pregunta.permiteOtra && (
-        <Boton variante="secundario" tamano="lg" onClick={() => proponer(VALOR_OTRA)}>
-          <CircleHelp size={22} aria-hidden /> {ETIQUETA_OTRA}
+        <Boton
+          variante="secundario"
+          tamano="lg"
+          className="h-auto min-h-16 py-2"
+          onClick={() => proponer(VALOR_OTRA)}
+        >
+          <CircleHelp size={36} strokeWidth={1.75} aria-hidden className="text-tinta-suave" />
+          {ETIQUETA_OTRA}
         </Boton>
       )}
 
@@ -86,22 +94,27 @@ export function Respuestas({ pregunta, alResponder, conCamara = false }: Respues
 }
 
 function GrillaOpciones({
-  opciones,
+  pregunta,
   alElegir,
   elegidas,
 }: {
-  opciones: Opcion[]
+  pregunta: Pregunta
   alElegir: (valor: string) => void
   elegidas?: string[]
 }) {
-  const conImagen = opciones.some((o) => o.pictograma)
+  const { opciones } = pregunta
   return (
-    <div className={cn('grid gap-3', conImagen ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2')}>
+    <div
+      className={cn(
+        'grid gap-3',
+        opciones.length > 4 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2',
+      )}
+    >
       {opciones.map((o) => (
         <BotonOpcion
           key={o.valor}
+          pregunta={pregunta}
           opcion={o}
-          conImagen={conImagen}
           seleccionada={elegidas?.includes(o.valor)}
           onClick={() => alElegir(o.valor)}
         />
@@ -111,32 +124,30 @@ function GrillaOpciones({
 }
 
 function BotonOpcion({
+  pregunta,
   opcion,
-  conImagen,
   onClick,
   seleccionada,
 }: {
+  pregunta: Pregunta
   opcion: Opcion
-  conImagen: boolean
   onClick: () => void
   seleccionada?: boolean | undefined
 }) {
+  const simbolo = simboloDe(pregunta, opcion.valor)
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={seleccionada}
       className={cn(
-        'rounded-tarjeta border-borde bg-superficie text-tinta shadow-tarjeta relative flex items-center border font-medium transition-colors',
+        'rounded-tarjeta border-borde bg-superficie text-tinta shadow-tarjeta relative flex min-h-36 flex-col items-center justify-center gap-2 border p-4 font-medium transition-colors',
         'hover:border-marca hover:bg-marca-suave/50',
-        conImagen ? 'min-h-36 flex-col justify-center gap-2 p-4' : 'min-h-20 gap-3 px-5 text-left',
         seleccionada && 'border-marca bg-marca-suave ring-marca ring-1',
       )}
     >
-      {opcion.pictograma && (
-        <img src={urlPublica(opcion.pictograma)} alt="" className="size-20 object-contain" />
-      )}
-      <span className="text-lg">{opcion.etiqueta}</span>
+      {simbolo && <Simbolo simbolo={simbolo} />}
+      <span className="text-center text-lg leading-tight">{opcion.etiqueta}</span>
       {seleccionada && (
         <Check
           size={20}
@@ -150,49 +161,119 @@ function BotonOpcion({
 }
 
 /**
- * P2: el cuerpo 3D si el dispositivo puede mostrarlo; si no, o si la persona lo prefiere,
- * la lista de zonas. La lista sirve también para teclado y lectores de pantalla.
+ * P2 "¿Dónde te duele?": el cuerpo 3D y la lista de zonas, sincronizados.
+ * - Tocar el cuerpo o una zona de la lista solo ELIGE; "Revisar respuesta" la propone y
+ *   lleva a la confirmación. Así la persona puede corregir antes.
+ * - Sin WebGL (o si el modelo no carga) queda solo la lista (CUE2). La lista también sirve
+ *   para teclado y lectores de pantalla.
  */
 function RespuestaCuerpo({
-  opciones,
+  pregunta,
   alElegir,
 }: {
-  opciones: Opcion[]
+  pregunta: Pregunta
   alElegir: (valor: string) => void
 }) {
-  const [modo, setModo] = useState<'3d' | 'lista'>(() => (hayWebGL() ? '3d' : 'lista'))
-  const cambiar = (
-    <Boton variante="fantasma" tamano="md" onClick={() => setModo(modo === '3d' ? 'lista' : '3d')}>
-      {modo === '3d' ? <List size={20} aria-hidden /> : <PersonStanding size={20} aria-hidden />}
-      {modo === '3d' ? 'Elegir de una lista' : 'Ver el cuerpo en 3D'}
-    </Boton>
-  )
+  const [con3D, setCon3D] = useState(hayWebGL)
+  const [elegida, setElegida] = useState<string | null>(null)
+  const valores = new Set(pregunta.opciones.map((o) => o.valor))
+  const opcionElegida = pregunta.opciones.find((o) => o.valor === elegida)
 
-  if (modo === 'lista') {
-    return (
-      <div className="flex flex-col gap-3">
-        <GrillaOpciones opciones={opciones} alElegir={alElegir} />
-        {hayWebGL() && cambiar}
-      </div>
-    )
-  }
-
-  const valores = new Set(opciones.map((o) => o.valor))
   return (
-    <div className="flex flex-col gap-2">
-      <Suspense
-        fallback={
-          <p className="rounded-tarjeta border-borde bg-superficie text-tinta-suave grid aspect-[3/4] place-items-center border">
-            Cargando cuerpo 3D…
-          </p>
-        }
-      >
-        <Cuerpo3D
-          alTocar={(zona) => valores.has(zona) && alElegir(zona)}
-          alFallar={() => setModo('lista')}
-        />
-      </Suspense>
-      {cambiar}
+    <div className="flex flex-col gap-4">
+      {con3D && (
+        <div className="rounded-tarjeta border-borde bg-superficie shadow-tarjeta overflow-hidden border">
+          <Suspense
+            fallback={
+              <p className="text-tinta-suave grid min-h-96 place-items-center">
+                Cargando cuerpo 3D…
+              </p>
+            }
+          >
+            <Cuerpo3D
+              zona={elegida}
+              alTocar={(zona) => valores.has(zona) && setElegida(zona)}
+              alFallar={() => setCon3D(false)}
+            />
+          </Suspense>
+          <div
+            className="flex flex-col items-center gap-1 px-4 py-3 text-center"
+            aria-live="polite"
+          >
+            {opcionElegida ? (
+              <span className="flex items-center gap-2 text-lg font-semibold">
+                <span className="size-3 rounded-full bg-[#e8743b]" aria-hidden />
+                {opcionElegida.etiqueta}
+              </span>
+            ) : (
+              <span className="text-tinta-suave">Toca el cuerpo o elige una zona de la lista.</span>
+            )}
+            <span className="text-tinta-suave text-xs">
+              La zona es aproximada: revísala antes de enviar. Derecha e izquierda corresponden a tu
+              cuerpo.
+            </span>
+          </div>
+        </div>
+      )}
+
+      <ListaZonas pregunta={pregunta} elegida={elegida} alElegir={setElegida} />
+
+      <div className="border-borde flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <Boton
+          variante="fantasma"
+          tamano="md"
+          className="px-3"
+          disabled={!elegida}
+          onClick={() => setElegida(null)}
+        >
+          <Eraser size={18} aria-hidden /> Borrar selección
+        </Boton>
+        <Boton
+          tamano="lg"
+          className="ml-auto"
+          disabled={!elegida}
+          onClick={() => elegida && alElegir(elegida)}
+        >
+          Revisar respuesta <ArrowRight size={20} aria-hidden />
+        </Boton>
+      </div>
+    </div>
+  )
+}
+
+/** Zonas en dos columnas compactas, cada una con su silueta (para quien no lee). */
+function ListaZonas({
+  pregunta,
+  elegida,
+  alElegir,
+}: {
+  pregunta: Pregunta
+  elegida: string | null
+  alElegir: (valor: string) => void
+}) {
+  return (
+    <div role="group" aria-label="Zonas del cuerpo" className="grid grid-cols-2 gap-2">
+      {pregunta.opciones.map((o) => {
+        const simbolo = simboloDe(pregunta, o.valor)
+        const marcada = elegida === o.valor
+        return (
+          <button
+            key={o.valor}
+            type="button"
+            aria-pressed={marcada}
+            onClick={() => alElegir(o.valor)}
+            className={cn(
+              'border-borde bg-superficie text-tinta flex min-h-16 items-center gap-3 rounded-xl border px-3 text-left font-medium transition-colors',
+              'hover:border-marca',
+              marcada && 'border-marca bg-marca-suave ring-marca ring-1',
+            )}
+          >
+            {simbolo?.tipo === 'zona' && <SiluetaZona zona={simbolo.zona} className="h-12" />}
+            <span className="flex-1 leading-tight">{o.etiqueta}</span>
+            {marcada && <Check size={20} strokeWidth={2.5} className="text-marca" aria-hidden />}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -218,26 +299,11 @@ function Escala({ opciones, alElegir }: { opciones: Opcion[]; alElegir: (valor: 
   )
 }
 
-/** Barras de altura creciente: "leve" llena 1, "fuerte" llena todas. */
-export function Barras({ llenas, total }: { llenas: number; total: number }) {
-  return (
-    <span className="flex h-16 items-end gap-1.5" aria-hidden>
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={i}
-          className={cn('w-3.5 rounded-sm', i < llenas ? 'bg-marca' : 'bg-superficie-2')}
-          style={{ height: `${((i + 1) / total) * 100}%` }}
-        />
-      ))}
-    </span>
-  )
-}
-
 function OpcionesMultiples({
-  opciones,
+  pregunta,
   alListo,
 }: {
-  opciones: Opcion[]
+  pregunta: Pregunta
   alListo: (valores: string[]) => void
 }) {
   const [elegidas, setElegidas] = useState<string[]>([])
@@ -248,14 +314,14 @@ function OpcionesMultiples({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-tinta-suave text-sm">Puedes elegir más de una.</p>
-      <GrillaOpciones opciones={opciones} alElegir={alternar} elegidas={elegidas} />
+      <GrillaOpciones pregunta={pregunta} alElegir={alternar} elegidas={elegidas} />
       <Boton
         tamano="lg"
         ancho="completo"
         disabled={elegidas.length === 0}
         onClick={() => alListo(elegidas)}
       >
-        Listo
+        <Check size={22} aria-hidden /> Listo
       </Boton>
     </div>
   )
