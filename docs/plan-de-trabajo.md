@@ -5,16 +5,16 @@
 Este documento reemplaza la versión 2.0 (PDF). Describe todos los módulos de MARI, quién los
 construye, cómo se conectan y cómo se acepta cada entrega: desde que el profesional inicia la
 consulta, la persona responde, el profesional escribe una repregunta, hasta que se genera el
-resumen y se borra la sesión.
+resumen y se borra la consulta.
 
 Se parte del primer PR: proyecto en `web/` y arquitectura del
 [ADR 0001](adr/0001-arquitectura.md).
 
-| Rol            | Persona          | Propiedad principal                                                                                                                             |
-| -------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Programadora A | Yosselin Cosme   | Experiencia de la persona paciente: banco y motor del flujo, vista paciente, confirmación, cuerpo 3D, regla de decisión de señas y repreguntas  |
-| Programadora B | Emmy Lopez Cueva | Experiencia del profesional y reconocimiento de señas: sesión, vista profesional, resumen, recolector, modelo, reconocedor, mensaje libre y PWA |
-| Ambas          | —                | Contratos compartidos, integración, matriz de pruebas, contenido LSP y salida a `main`                                                          |
+| Rol            | Persona          | Propiedad principal                                                                                                                                            |
+| -------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Programadora A | Yosselin Cosme   | Experiencia de la persona paciente: banco y motor del flujo, vista paciente, confirmación, cuerpo 3D, regla de decisión de señas y repreguntas                 |
+| Programadora B | Emmy Lopez Cueva | Experiencia del profesional y reconocimiento de señas: estado de la consulta, vista profesional, resumen, recolector, modelo, reconocedor, mensaje libre y PWA |
+| Ambas          | —                | Contratos compartidos, integración, matriz de pruebas, contenido LSP y salida a `main`                                                                         |
 
 > **Decisiones ya tomadas:** un solo dispositivo sin backend; datos clínicos solo en memoria;
 > reconocimiento y búsqueda en el navegador; resumen con plantilla, sin IA generativa; sin
@@ -23,18 +23,19 @@ Se parte del primer PR: proyecto en `web/` y arquitectura del
 
 ## Cambios respecto a la versión 2.0
 
-| #   | Cambio                                                                                                | Dónde     |
-| --- | ----------------------------------------------------------------------------------------------------- | --------- |
-| 1   | La rama de integración es `develop` (ya existe en GitHub) y las ramas de trabajo usan `feature/`      | §8        |
-| 2   | Las respuestas guardan `ciclo` y `sintoma`, para saber a qué síntoma pertenece cada P2–P5             | §5.2      |
-| 3   | Nuevo modo demo: sin él, ningún video LSP se vería ante el jurado                                     | §5.5, DEM |
-| 4   | La regla de decisión de señas es una función pura del dominio, compartida por SEN y LIB               | §5.3, DEC |
-| 5   | `detectarEnGrabacion` devuelve cuándo ocurre cada seña; el reconocedor informa el estado de la cámara | §5.1      |
-| 6   | Nuevo contrato de sesión, con las fases de entrega de la tablet y el caso P0 = SÍ                     | §5.4      |
-| 7   | P9 se activa con `mostrarSi` (configuración del profesional)                                          | §5.2      |
-| 8   | Reparto 19/19: SES y PWA pasan a B; BUS pasa a A; REC sube a la fase a                                | §4, §6    |
-| 9   | "Modo profesional" se activa manteniendo pulsado, para evitar entradas accidentales                   | PRO3      |
-| 10  | Se agregan calendario y mínimo presentable                                                            | §6        |
+| #   | Cambio                                                                                                              | Dónde     |
+| --- | ------------------------------------------------------------------------------------------------------------------- | --------- |
+| 1   | La rama de integración es `develop` (ya existe en GitHub) y las ramas de trabajo usan `feature/`                    | §8        |
+| 2   | Las respuestas guardan `ciclo` y `sintoma`, para saber a qué síntoma pertenece cada P2–P5                           | §5.2      |
+| 3   | Nuevo modo demo: sin él, ningún video LSP se vería ante el jurado                                                   | §5.5, DEM |
+| 4   | La regla de decisión de señas es una función pura del dominio, compartida por SEN y LIB                             | §5.3, DEC |
+| 5   | `detectarEnGrabacion` devuelve cuándo ocurre cada seña; el reconocedor informa el estado de la cámara               | §5.1      |
+| 6   | Nuevo contrato de consulta, con las fases de entrega de la tablet y el caso P0 = SÍ                                 | §5.4      |
+| 7   | P9 se activa con `mostrarSi` (configuración del profesional)                                                        | §5.2      |
+| 8   | Reparto 19/19: CNS (consulta) y PWA pasan a B; BUS pasa a A; REC sube a la fase a                                   | §4, §6    |
+| 9   | "Modo profesional" se activa manteniendo pulsado, para evitar entradas accidentales                                 | PRO3      |
+| 10  | Se agregan calendario y mínimo presentable                                                                          | §6        |
+| 11  | "Sesión" pasa a llamarse **consulta** (módulo CNS) para no confundirla con un inicio de sesión: MARI no tiene login | §5.4, CNS |
 
 ---
 
@@ -49,7 +50,7 @@ que la persona confirmó.
 - No registra pacientes: no pide nombre, DNI, edad, contacto ni fichas. No existe historial
   entre consultas.
 - Respuestas, resumen y grabaciones viven **solo en memoria** y se borran al terminar la
-  sesión, recargar o cerrar la pestaña. Nada se escribe en `localStorage`, `sessionStorage`,
+  consulta, recargar o cerrar la pestaña. Nada se escribe en `localStorage`, `sessionStorage`,
   archivos, logs ni red.
 - Ninguna respuesta pasa al profesional sin la confirmación ✓ de la persona.
 - Copiar el resumen es una acción explícita; el portapapeles queda fuera de MARI y así se le
@@ -65,7 +66,7 @@ Una tablet que pasa de mano. Cada paso indica qué módulo lo resuelve y quién 
 
 | #   | Qué ocurre                                                                                                                                                          | Quién usa   | Módulos            | Responsable                 |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------ | --------------------------- |
-| 1   | El profesional mantiene pulsado **Modo profesional** → **Iniciar consulta** (y activa P9 si corresponde). Se crea una sesión vacía con un ID técnico temporal.      | Profesional | SES, PRO           | B                           |
+| 1   | El profesional mantiene pulsado **Modo profesional** → **Iniciar consulta** (y activa P9 si corresponde). Se crea una consulta vacía con un ID técnico temporal.    | Profesional | CNS, PRO           | B                           |
 | 2   | Pantalla de entrega: "Entregue la tablet a la persona". Se abre la vista paciente.                                                                                  | Ambos       | PAC                | A                           |
 | 3   | P-OPC (opcional): ¿quieres que tu acompañante esté presente?                                                                                                        | Paciente    | FLU, PAC           | A                           |
 | 4   | P0 alerta. Si responde SÍ: "Avisa al personal ahora" y el flujo se detiene.                                                                                         | Paciente    | FLU, PAC           | A                           |
@@ -79,7 +80,7 @@ Una tablet que pasa de mano. Cada paso indica qué módulo lo resuelve y quién 
 | 12  | **Repregunta:** el profesional escribe una pregunta libre. MARI busca por significado los 3 videos validados más parecidos.                                         | Profesional | BUS                | A                           |
 | 13  | El profesional elige uno y la tablet vuelve al paciente, que responde y confirma igual que en los pasos 6–7. Si nada se parece: "Solicite apoyo de interpretación". | Ambos       | BUS, PAC, CON      | A                           |
 | 14  | **Resumen final** con plantilla: alerta, síntomas, antecedentes, repreguntas y mensaje libre.                                                                       | Profesional | RES, PRO           | B                           |
-| 15  | **Terminar sesión** borra respuestas y grabaciones. Una nueva consulta empieza vacía.                                                                               | Profesional | SES                | B                           |
+| 15  | **Terminar consulta** borra respuestas y grabaciones. Una nueva consulta empieza vacía.                                                                             | Profesional | CNS                | B                           |
 
 ---
 
@@ -98,7 +99,7 @@ web/
       resumen/           # plantilla del resumen
       senas/             # regla de decisión decidirSena()
     application/
-      sesion/            # store Zustand sin persistencia + casos de uso
+      consulta/          # store Zustand sin persistencia + casos de uso
       puertos/           # Reconocedor, Buscador, Grabador
     infrastructure/
       banco-json/        # carga y valida data/banco-preguntas.json
@@ -145,7 +146,7 @@ tareas de contenido (videos, señantes) son compartidas y no cuentan aquí.
 
 | ID  | Módulo                                                   | Carpeta principal          | Fase | Pts    |
 | --- | -------------------------------------------------------- | -------------------------- | ---- | ------ |
-| SES | Estado de sesión y casos de uso (sin persistencia)       | `application/sesion`       | a    | 2      |
+| CNS | Estado de la consulta y casos de uso (sin persistencia)  | `application/consulta`     | a    | 2      |
 | REC | Ruta `/recolector` para grabar señas de entrenamiento    | `ui/pages/Recolector`      | a    | 3      |
 | PRO | Vista profesional: revisión y faltantes                  | `ui/pages/Profesional`     | a    | 2      |
 | RES | Plantilla del resumen + pantalla de resumen              | `domain/resumen`, `ui`     | a    | 2      |
@@ -157,8 +158,8 @@ tareas de contenido (videos, señantes) son compartidas y no cuentan aquí.
 
 **Por qué este reparto:**
 
-- **SES va con B** porque la vista profesional y el resumen son sus principales consumidores,
-  y `terminarSesion` llama al Grabador de B. Se hace **primero en la fase a**; mientras tanto,
+- **CNS va con B** porque la vista profesional y el resumen son sus principales consumidores,
+  y `terminarConsulta` llama al Grabador de B. Se hace **primero en la fase a**; mientras tanto,
   A trabaja contra el contrato 5.4 con un store simulado.
 - **REC sube a la fase a** porque grabar y validar señas es lo más lento del proyecto.
 - **BUS va con A** porque no depende de nada y así B puede concentrarse en la cadena
@@ -258,7 +259,7 @@ export interface Grabador {
   /** Graba sin audio hasta maxSeg. El Blob vive solo en memoria. */
   grabar(maxSeg: number, alProgreso?: (seg: number) => void): Promise<Blob>;
   cancelar(): void;
-  /** Libera todos los Blob y URLs creadas. Lo llama terminarSesion. */
+  /** Libera todos los Blob y URLs creadas. Lo llama terminarConsulta. */
   descartarTodo(): void;
 }
 ```
@@ -402,7 +403,7 @@ confirmar con los datos:
 | Decisión      | `decidirSena()` con umbral 0,70 y 3 inferencias seguidas. Bajo el umbral: opciones táctiles. Nunca confirma automáticamente.                                                                                    |
 | Versión       | `models/senas/v1/`; cualquier cambio de entrada o clases crea `v2` y se avisa a A.                                                                                                                              |
 
-### 5.4 Sesión (`application/sesion/`)
+### 5.4 Consulta (`application/consulta/`)
 
 La vista paciente (A) y la profesional (B) dependen del mismo estado. Se fija aquí para que
 ambas trabajen en paralelo.
@@ -418,7 +419,7 @@ export type Fase =
   | "repregunta" // la tablet volvió al paciente por una repregunta
   | "resumen";
 
-export interface EstadoSesion {
+export interface EstadoConsulta {
   id: string; // técnico y temporal, sin datos personales
   fase: Fase;
   config: { preguntarEmbarazo: boolean };
@@ -429,14 +430,14 @@ export interface EstadoSesion {
 }
 
 export interface CasosDeUso {
-  iniciarConsulta(config: EstadoSesion["config"]): void;
+  iniciarConsulta(config: EstadoConsulta["config"]): void;
   proponer(respuesta: RespuestaProvisional): void; // queda provisional
   confirmar(): void; // ✓: guarda y avanza con el motor
   descartar(): void; // ✗: borra la provisional
   entregarAlProfesional(): void;
   enviarRepregunta(preguntaId: string, sintoma?: string): void;
   verResumen(): void;
-  terminarSesion(): void; // borra todo y llama a Grabador.descartarTodo()
+  terminarConsulta(): void; // borra todo y llama a Grabador.descartarTodo()
 }
 ```
 
@@ -462,7 +463,7 @@ Las dos columnas avanzan en paralelo.
 | ----------- | --------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | 0 · Hecho   | Base web, ADR, presentación (primer PR)                                     | —                                                         | PR aceptado                                                                                               |
 | 0b · Juntas | Contrato 5.2                                                                | Contratos 5.1, 5.4 y borrador de 5.3                      | Ambas aprueban los contratos                                                                              |
-| a           | BAN, FLU, PAC+VID, OPC, CON, DEM                                            | SES (primero), REC, PRO, RES                              | Flujo táctil completo de punta a punta con simuladores; `/recolector` graba                               |
+| a           | BAN, FLU, PAC+VID, OPC, CON, DEM                                            | CNS (primero), REC, PRO, RES                              | Flujo táctil completo de punta a punta con simuladores; `/recolector` graba                               |
 | b           | CUE (cuerpo 3D en P2)                                                       | Grabación con señantes y ML (entrenar, evaluar, exportar) | P2 funciona con 3D y respaldo; hay datos de ≥ 3 señantes                                                  |
 | c           | DEC, luego BUS (Transformers.js)                                            | SEN                                                       | El reconocedor real reemplaza al simulador y cumple M5; repregunta escrita → video → respuesta confirmada |
 | e           | Integrar cámara y pantallas de repregunta en la vista paciente; revisar LIB | LIB (mensaje libre)                                       | Mensaje libre con señas confirmadas en el resumen                                                         |
@@ -570,20 +571,20 @@ aceptada por ambas).
 
 ### 7.2 Programadora B · Emmy
 
-**SES · Sesión**
+**CNS · Consulta**
 
-- **SES1** La sesión cumple §5.4: solo ID técnico, fase, configuración, pregunta activa,
+- **CNS1** La consulta cumple §5.4: solo ID técnico, fase, configuración, pregunta activa,
   ciclo, respuesta provisional y respuestas confirmadas. Sin datos de identificación.
-- **SES2** Nada se serializa: un test falla si se escribe en `localStorage`, `sessionStorage`
-  o se llama a la red con datos de la sesión.
-- **SES3** Terminar sesión, recargar o cerrar la pestaña borra todo, incluidas las
+- **CNS2** Nada se serializa: un test falla si se escribe en `localStorage`, `sessionStorage`
+  o se llama a la red con datos de la consulta.
+- **CNS3** Terminar la consulta, recargar o cerrar la pestaña borra todo, incluidas las
   grabaciones (llama a `Grabador.descartarTodo`).
 
 **PRO · Vista profesional**
 
-- **PRO1** Muestra solo respuestas confirmadas de la sesión activa y resalta los datos
+- **PRO1** Muestra solo respuestas confirmadas de la consulta activa y resalta los datos
   faltantes.
-- **PRO2** Ofrece: Repreguntar, Ver resumen y Terminar sesión. Informa que MARI no conserva
+- **PRO2** Ofrece: Repreguntar, Ver resumen y Terminar consulta. Informa que MARI no conserva
   datos.
 - **PRO3** "Modo profesional" se activa manteniendo pulsado el botón (≈ 2 s), para evitar
   entradas accidentales. No se presenta como medida de seguridad.
@@ -656,7 +657,7 @@ va en una rama pequeña creada desde `develop`.
 **Ramas iniciales sugeridas:** `docs/plan-y-contratos`, `feature/a-banco-flujo`,
 `feature/a-vista-paciente`, `feature/a-confirmacion`, `feature/a-modo-demo`,
 `feature/a-cuerpo-3d`, `feature/a-decision-senas`, `feature/a-repreguntas`,
-`feature/b-sesion`, `feature/b-recolector`, `feature/b-vista-profesional`,
+`feature/b-consulta`, `feature/b-recolector`, `feature/b-vista-profesional`,
 `feature/b-resumen`, `feature/ml-entrenamiento`, `feature/b-reconocedor`,
 `feature/b-mensaje-libre`, `feature/b-pwa`.
 
@@ -696,7 +697,7 @@ git push -u origin feature/a-banco-flujo   # abrir PR hacia develop
 
 | Recorrido                          | Ejecuta | Resultado esperado                                                    |
 | ---------------------------------- | ------- | --------------------------------------------------------------------- |
-| Inicio y entrega de tablet         | B → A   | Sesión vacía, sin identificación                                      |
+| Inicio y entrega de tablet         | B → A   | Consulta vacía, sin identificación                                    |
 | P0 alerta en SÍ                    | A       | Mensaje de aviso, flujo detenido, resumen solo con la alerta          |
 | Dos síntomas con P6                | A       | Ambos síntomas con su duración, intensidad y evolución, sin mezclarse |
 | Respuesta por seña                 | B       | Seña propuesta → ✓ guarda / ✗ repite                                  |
@@ -706,7 +707,7 @@ git push -u origin feature/a-banco-flujo   # abrir PR hacia develop
 | Repregunta sin coincidencia        | A       | Orienta a interpretación                                              |
 | Mensaje libre                      | B       | Señas confirmadas + aviso para intérprete                             |
 | Resumen y terminar                 | B       | Secciones completas; todo se borra                                    |
-| Recargar a mitad                   | Ambas   | Sesión perdida, nueva consulta vacía                                  |
+| Recargar a mitad                   | Ambas   | Consulta perdida, nueva consulta vacía                                |
 | Modo demo                          | A       | Videos no validados visibles con su etiqueta                          |
 | Sin internet tras la primera carga | B       | Todo funciona                                                         |
 
