@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "preguntas": [
+    {
+      "id": "P1",
+      "grupo": "flujo",
+      "texto": "¿Qué sientes?",
+      "video": "videos/preguntas/01-que-sientes.mp4",
+      "validado": false,
+      "tipo": "sena",
+      "multiple": false,
+      "opciones": [
+        { "valor": "DOLOR", "etiqueta": "Dolor", "pictograma": "pictogramas/dolor.png" },
+        { "valor": "TOS", "etiqueta": "Tos", "pictograma": "pictogramas/tos.png" },
+        { "valor": "FIEBRE", "etiqueta": "Fiebre", "pictograma": "pictogramas/fiebre.png" },
+        {
+          "valor": "FALTA_DE_AIRE",
+          "etiqueta": "Falta de aire",
+          "pictograma": "pictogramas/falta-de-aire.png"
+        }
+      ],
+      "permiteOtra": true,
+      "iniciaCiclo": true,
+      "siguiente": [{ "si": { "valor": "DOLOR" }, "ir": "P2" }, { "ir": "P3" }]
+    },
+    {
+      "id": "P2",
+      "grupo": "flujo",
+      "texto": "¿Dónde te duele?",
+      "video": "videos/preguntas/02-donde-te-duele.mp4",
+      "validado": false,
+      "tipo": "cuerpo",
+      "opciones": [
+        { "valor": "CABEZA", "etiqueta": "Cabeza" },
+        { "valor": "GARGANTA", "etiqueta": "Garganta" },
+        { "valor": "PECHO", "etiqueta": "Pecho" },
+        { "valor": "ABDOMEN_SUPERIOR", "etiqueta": "Abdomen superior" },
+        { "valor": "ABDOMEN_INFERIOR", "etiqueta": "Abdomen inferior" },
+        { "valor": "ESPALDA", "etiqueta": "Espalda" },
+        { "valor": "BRAZOS", "etiqueta": "Brazos" },
+        { "valor": "PIERNAS", "etiqueta": "Piernas" },
+        { "valor": "OTRA_ZONA", "etiqueta": "Otra zona" }
+      ],
+      "porCiclo": true,
+      "siguiente": [{ "ir": "P3" }]
+    },
+    {
+      "id": "P3",
+      "grupo": "flujo",
+      "texto": "¿Desde cuándo?",
+      "video": "videos/preguntas/03-desde-cuando.mp4",
+      "validado": false,
+      "tipo": "opciones",
+      "opciones": [
+        { "valor": "HOY", "etiqueta": "Hoy" },
+        { "valor": "AYER", "etiqueta": "Ayer" },
+        { "valor": "VARIOS_DIAS", "etiqueta": "Varios días" },
+        { "valor": "UNA_SEMANA_O_MAS", "etiqueta": "Una semana o más" }
+      ],
+      "porCiclo": true,
+      "siguiente": [{ "ir": "P4" }]
+    },
+    {
+      "id": "P4",
+      "grupo": "flujo",
+      "texto": "¿Qué tan fuerte es?",
+      "video": "videos/preguntas/04-que-tan-fuerte-es.mp4",
+      "validado": false,
+      "tipo": "escala",
+      "opciones": [
+        { "valor": "LEVE", "etiqueta": "Leve" },
+        { "valor": "MODERADO", "etiqueta": "Moderado" },
+        { "valor": "FUERTE", "etiqueta": "Fuerte" }
+      ],
+      "porCiclo": true,
+      "siguiente": [{ "ir": "P7" }]
+    },
+    {
+      "id": "P7",
+      "grupo": "flujo",
+      "texto": "¿Tienes alergias?",
+      "video": "videos/preguntas/05-alergias.mp4",
+      "validado": false,
+      "tipo": "sena",
+      "opciones": [
+        { "valor": "SI", "etiqueta": "Sí", "pictograma": "pictogramas/si.png" },
+        { "valor": "NO", "etiqueta": "No", "pictograma": "pictogramas/no.png" }
+      ],
+      "siguiente": [{ "ir": "P9" }]
+    },
+    {
+      "id": "P9",
+      "grupo": "flujo",
+      "texto": "¿Estás embarazada?",
+      "video": "videos/preguntas/06-embarazo.mp4",
+      "validado": false,
+      "tipo": "opciones",
+      "opciones": [
+        { "valor": "SI", "etiqueta": "Sí", "pictograma": "pictogramas/si.png" },
+        { "valor": "NO", "etiqueta": "No", "pictograma": "pictogramas/no.png" },
+        { "valor": "NO_SE", "etiqueta": "No sé" }
+      ],
+      "mostrarSi": { "config": "preguntarEmbarazo" },
+      "siguiente": [{ "ir": "FIN" }]
+    }
+  ]
+}
