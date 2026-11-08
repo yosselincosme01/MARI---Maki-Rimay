@@ -23,19 +23,20 @@ Se parte del primer PR: proyecto en `web/` y arquitectura del
 
 ## Cambios respecto a la versión 2.0
 
-| #   | Cambio                                                                                                              | Dónde     |
-| --- | ------------------------------------------------------------------------------------------------------------------- | --------- |
-| 1   | La rama de integración es `develop` (ya existe en GitHub) y las ramas de trabajo usan `feature/`                    | §8        |
-| 2   | Las respuestas guardan `ciclo` y `sintoma`, para saber a qué síntoma pertenece cada P2–P5                           | §5.2      |
-| 3   | Nuevo modo demo: sin él, ningún video LSP se vería ante el jurado                                                   | §5.5, DEM |
-| 4   | La regla de decisión de señas es una función pura del dominio, compartida por SEN y LIB                             | §5.3, DEC |
-| 5   | `detectarEnGrabacion` devuelve cuándo ocurre cada seña; el reconocedor informa el estado de la cámara               | §5.1      |
-| 6   | Nuevo contrato de consulta, con las fases de entrega de la tablet y el caso P0 = SÍ                                 | §5.4      |
-| 7   | P9 se activa con `mostrarSi` (configuración del profesional)                                                        | §5.2      |
-| 8   | Reparto 19/19: CNS (consulta) y PWA pasan a B; BUS pasa a A; REC sube a la fase a                                   | §4, §6    |
-| 9   | "Modo profesional" se activa manteniendo pulsado, para evitar entradas accidentales                                 | PRO3      |
-| 10  | Se agregan calendario y mínimo presentable                                                                          | §6        |
-| 11  | "Sesión" pasa a llamarse **consulta** (módulo CNS) para no confundirla con un inicio de sesión: MARI no tiene login | §5.4, CNS |
+| #   | Cambio                                                                                                              | Dónde      |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | La rama de integración es `develop` (ya existe en GitHub) y las ramas de trabajo usan `feature/`                    | §8         |
+| 2   | Las respuestas guardan `ciclo` y `sintoma`, para saber a qué síntoma pertenece cada P2–P5                           | §5.2       |
+| 3   | Nuevo modo demo: sin él, ningún video LSP se vería ante el jurado                                                   | §5.5, DEM  |
+| 4   | La regla de decisión de señas es una función pura del dominio, compartida por SEN y LIB                             | §5.3, DEC  |
+| 5   | `detectarEnGrabacion` devuelve cuándo ocurre cada seña; el reconocedor informa el estado de la cámara               | §5.1       |
+| 6   | Nuevo contrato de consulta, con las fases de entrega de la tablet y el caso P0 = SÍ                                 | §5.4       |
+| 7   | P9 se activa con `mostrarSi` (configuración del profesional)                                                        | §5.2       |
+| 8   | Reparto 19/19: CNS (consulta) y PWA pasan a B; BUS pasa a A; REC sube a la fase a                                   | §4, §6     |
+| 9   | "Modo profesional" se activa manteniendo pulsado, para evitar entradas accidentales                                 | PRO3       |
+| 10  | Se agregan calendario y mínimo presentable                                                                          | §6         |
+| 11  | "Sesión" pasa a llamarse **consulta** (módulo CNS) para no confundirla con un inicio de sesión: MARI no tiene login | §5.4, CNS  |
+| 12  | Nuevo contrato del motor del flujo; la consulta agrega `recibirTablet` y `repreguntaActiva`                         | §5.4, §5.6 |
 
 ---
 
@@ -425,12 +426,14 @@ export interface EstadoConsulta {
   config: { preguntarEmbarazo: boolean };
   preguntaActiva: string | null;
   ciclo: { numero: number; sintoma?: string } | null;
+  repreguntaActiva: { preguntaId: string; sintoma?: string } | null; // enviada y sin responder
   provisional: RespuestaProvisional | null;
   respuestas: Respuesta[];
 }
 
 export interface CasosDeUso {
   iniciarConsulta(config: EstadoConsulta["config"]): void;
+  recibirTablet(): void; // sale de la pantalla de entrega (paciente o profesional)
   proponer(respuesta: RespuestaProvisional): void; // queda provisional
   confirmar(): void; // ✓: guarda y avanza con el motor
   descartar(): void; // ✗: borra la provisional
@@ -444,6 +447,10 @@ export interface CasosDeUso {
 **P0 = SÍ:** la fase pasa a `alerta` y la persona ve "Avisa al personal ahora". El profesional
 puede abrir la vista profesional, donde el resumen muestra solo la **Alerta inicial**.
 
+**P11 = SÍ:** no hay una fase propia; la vista paciente y el resumen lo reconocen por la
+respuesta P11 = `SI`. Las transiciones entre fases están documentadas en
+`application/consulta/tipos.ts`.
+
 ### 5.5 Modo demo
 
 Hoy ningún video está validado. Sin este modo, la demo no mostraría ningún video LSP.
@@ -452,6 +459,37 @@ Hoy ningún video está validado. Sin este modo, la demo no mostraría ningún v
   no validado"** sobre el reproductor.
 - Sin esa variable se aplica PAC2: un video no validado aparece como "video pendiente".
 - La demo para el jurado usa `VITE_DEMO=true` y se presenta como demo técnica (R3).
+
+### 5.6 Motor del flujo (`domain/flujo/motor.ts`)
+
+Es la conexión entre la consulta (CNS, B) y el motor (FLU, A). La consulta no sabe qué pregunta
+sigue: se lo pregunta al motor después de cada ✓.
+
+```ts
+export interface ConfigConsulta {
+  preguntarEmbarazo: boolean; // activa P9 mediante mostrarSi
+}
+
+export interface Ciclo {
+  numero: number;
+  sintoma?: string;
+}
+
+export type Paso =
+  | { tipo: "pregunta"; preguntaId: string; ciclo: Ciclo | null }
+  | { tipo: "alerta" } // P0 = SÍ
+  | { tipo: "interpretacion" } // P11 = SÍ
+  | { tipo: "fin" }; // terminó el flujo → entregar al profesional
+
+export interface MotorFlujo {
+  inicio(config: ConfigConsulta): Paso;
+  siguiente(actual: Paso, respuesta: Respuesta, config: ConfigConsulta): Paso;
+}
+```
+
+- El motor decide el `ciclo` de cada paso: P1 abre el ciclo `n` (sin síntoma todavía) y, desde
+  P2, el paso lleva `sintoma` igual al valor confirmado en P1. La consulta lo copia a la respuesta.
+- Las repreguntas no pasan por el motor.
 
 ---
 
