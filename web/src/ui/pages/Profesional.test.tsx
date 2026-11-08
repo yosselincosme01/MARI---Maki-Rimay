@@ -16,6 +16,7 @@ import { Profesional } from './Profesional'
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 function bancoReal(): Banco {
@@ -24,7 +25,7 @@ function bancoReal(): Banco {
   return resultado.banco
 }
 
-/** Consulta con el banco real y, por defecto, el motor real de Yosselin. */
+/** Vista profesional con la consulta real, el banco real y los roles del banco. */
 function preparar(motor?: MotorFlujo) {
   const banco = bancoReal()
   let n = 0
@@ -33,6 +34,10 @@ function preparar(motor?: MotorFlujo) {
     grabador: crearGrabadorSimulado(),
     generarId: () => `id-${++n}`,
     ahora: () => new Date('2026-11-08T15:00:00.000Z'),
+    describir: (id) => {
+      const p = banco.preguntas.find((x) => x.id === id)
+      return p && { iniciaCiclo: p.iniciaCiclo, porCiclo: p.porCiclo }
+    },
   })
   const router = createMemoryRouter(
     [
@@ -49,158 +54,176 @@ function preparar(motor?: MotorFlujo) {
   return { consulta, router }
 }
 
-/** La persona responde con toques (como lo haría desde su vista) y devuelve la tablet. */
-function responderTodo(consulta: StoreConsulta, valores: string[]) {
+/** La persona responde lo enviado (como desde su vista) y devuelve el dispositivo. */
+function laPersonaResponde(consulta: StoreConsulta, valores: string[]) {
   const c = () => consulta.getState()
-  c().iniciarConsulta({ preguntarEmbarazo: false })
   c().recibirTablet()
   for (const valor of valores) {
-    const preguntaId = c().preguntaActiva
-    if (!preguntaId) break
-    c().proponer({ preguntaId, valor, origen: 'tactil' })
+    c().proponer({ preguntaId: c().preguntaActiva!, valor, origen: 'tactil' })
     c().confirmar()
   }
+  c().recibirTablet()
 }
 
-describe('Vista profesional (PRO)', () => {
-  it('inicia la consulta con la opción de P9 y lleva a la vista de la persona', async () => {
+const empezar = async () => {
+  await userEvent.click(screen.getByRole('button', { name: 'Iniciar consulta' }))
+}
+const campo = () => screen.getByRole('textbox', { name: /Pregunta para la persona/ })
+const enviar = () => screen.getByRole('button', { name: /^Enviar/ })
+
+describe('Vista profesional · conversación', () => {
+  it('la consulta empieza con el profesional, sin preguntas ni flujo fijo', async () => {
     const { consulta, router } = preparar()
-    await userEvent.click(screen.getByLabelText(/embarazo/i))
-    await userEvent.click(screen.getByRole('button', { name: 'Iniciar consulta' }))
-    expect(consulta.getState()).toMatchObject({
-      fase: 'entrega-paciente',
-      config: { preguntarEmbarazo: true },
-    })
+    await empezar()
+    expect(consulta.getState()).toMatchObject({ fase: 'profesional', respuestas: [] })
+    expect(router.state.location.pathname).toBe('/profesional')
+    expect(screen.getByRole('heading', { name: 'Consulta en curso' })).toBeInTheDocument()
+    expect(screen.getByText('Aún no hay respuestas')).toBeInTheDocument()
+  })
+
+  it('escribir la pregunta tal cual la agrega y la envía a la persona', async () => {
+    const { consulta, router } = preparar()
+    await empezar()
+    await userEvent.type(campo(), '¿Qué sientes?')
+    expect(screen.getByText(/Se agregará/)).toHaveTextContent('¿Qué sientes?')
+    await userEvent.keyboard('{Enter}')
+    expect(enviar()).toHaveTextContent('Enviar pregunta a la persona')
+    await userEvent.click(enviar())
+    expect(consulta.getState()).toMatchObject({ fase: 'entrega-paciente', preguntaActiva: 'P1' })
     expect(router.state.location.pathname).toBe('/paciente')
   })
 
-  it('mientras la persona responde, no muestra sus respuestas', async () => {
+  it('varias preguntas en un solo texto quedan en fila, en orden', async () => {
     const { consulta } = preparar()
-    consulta.getState().iniciarConsulta({ preguntarEmbarazo: false })
-    consulta.getState().recibirTablet()
-    consulta.getState().proponer({ preguntaId: 'P1', valor: 'DOLOR', origen: 'tactil' })
-    consulta.getState().confirmar()
-    expect(await screen.findByText('La persona está respondiendo')).toBeInTheDocument()
-    expect(screen.queryByText(/Dolor/)).not.toBeInTheDocument()
-  })
-
-  it('al recibir la tablet, revisa solo lo confirmado y resalta lo que falta (PRO1)', async () => {
-    const { consulta } = preparar()
-    // P1 Dolor → P2 abdomen inferior → P3 ayer → P4 fuerte → P7 no → fin. P5 aún no está en el banco.
-    responderTodo(consulta, ['DOLOR', 'ABDOMEN_INFERIOR', 'AYER', 'FUERTE', 'NO'])
-    expect(await screen.findByText('La persona terminó de responder')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Recibir el dispositivo' }))
-
-    expect(screen.getByRole('heading', { name: 'Revisión de respuestas' })).toBeInTheDocument()
-    const sintoma = screen.getByText(
-      'Dolor en abdomen inferior desde ayer, intensidad fuerte, evolución no especificada.',
-    )
-    expect(sintoma).toBeInTheDocument()
-    // Cada dato junto a su nombre; el que falta se resalta, el dicho no.
-    const valorDe = (etiqueta: string) => screen.getAllByText(etiqueta)[0]!.nextElementSibling
-    expect(valorDe('Evolución')).toHaveTextContent('Falta un dato: no especificado')
-    expect(valorDe('Intensidad')).toHaveTextContent(/^fuerte$/)
-    expect(valorDe('Alergias')).toHaveTextContent(/^no$/)
-  })
-
-  it('ofrece Repreguntar (pronto), Ver resumen y Terminar consulta (PRO2)', async () => {
-    const { consulta } = preparar()
-    responderTodo(consulta, ['TOS', 'HOY', 'LEVE', 'NO'])
-    consulta.getState().recibirTablet()
-    expect(await screen.findByRole('button', { name: /Repreguntar/ })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Ver resumen/ })).toBeEnabled()
-    expect(screen.getByRole('button', { name: /Terminar consulta/ })).toBeEnabled()
-    expect(screen.getByText(/MARI no conserva datos/)).toBeInTheDocument()
-  })
-
-  it('el resumen tiene sus secciones, las originales y el cierre; sin "Repreguntas" (RES1–RES3)', async () => {
-    const { consulta } = preparar()
-    responderTodo(consulta, ['FIEBRE', 'HOY', 'MODERADO', 'SI'])
-    consulta.getState().recibirTablet()
-    await userEvent.click(await screen.findByRole('button', { name: /Ver resumen/ }))
-
-    for (const seccion of ['Alerta inicial', 'Síntomas referidos', 'Antecedentes']) {
-      expect(screen.getByRole('heading', { name: seccion })).toBeInTheDocument()
-    }
-    // Las secciones vacías no aparecen; las repreguntas van dentro de su síntoma.
-    expect(screen.queryByRole('heading', { name: /Repreguntas|Mensaje libre/ })).toBeNull()
+    await empezar()
+    await userEvent.type(campo(), '¿Dónde te duele? y desde cuándo{Enter}')
+    const fila = screen.getByRole('list')
     expect(
-      screen.getByText('Síntomas referidos', { selector: 'dt' }).nextElementSibling,
-    ).toHaveTextContent('1')
-    expect(screen.getByText(/Respuestas originales \(4\)/)).toBeInTheDocument()
-    expect(screen.getAllByText(/No constituye diagnóstico/).length).toBeGreaterThan(0)
+      within(fila)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual([
+      expect.stringContaining('¿Dónde te duele?'),
+      expect.stringContaining('¿Desde cuándo?'),
+    ])
+    await userEvent.click(enviar())
+    expect(consulta.getState().envio?.preguntas).toEqual(['P2', 'P3'])
   })
 
-  it('copiar texto avisa que el portapapeles queda fuera de MARI (RES4)', async () => {
+  it('también se puede elegir una pregunta disponible sin escribir', async () => {
+    const { consulta } = preparar()
+    await empezar()
+    const alergias = screen.getByRole('button', { name: '¿Tienes alergias?' })
+    await userEvent.click(alergias)
+    expect(alergias).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(enviar())
+    expect(consulta.getState().preguntaActiva).toBe('P7')
+  })
+
+  it('lo que no tiene video lo dice y orienta a interpretación, sin enviar nada', async () => {
+    preparar()
+    await empezar()
+    await userEvent.type(campo(), '¿Toma pastillas para la presión?')
+    expect(screen.getByText(/No hay video LSP para/)).toHaveTextContent(/interpretación/)
+    expect(screen.getByRole('button', { name: /Agregar/ })).toBeDisabled()
+    expect(enviar()).toBeDisabled()
+  })
+
+  it('al volver, muestra lo nuevo y el resumen en vivo con lo que falta resaltado', async () => {
+    const { consulta } = preparar()
+    await empezar()
+    consulta.getState().preguntar(['P1', 'P2', 'P3'])
+    laPersonaResponde(consulta, ['DOLOR', 'ABDOMEN_INFERIOR', 'AYER'])
+
+    // Se anuncia a lectores de pantalla (role=status) al volver el dispositivo.
+    const region = await screen.findByRole('status', { name: 'Respuestas nuevas' })
+    expect(region).toHaveTextContent('Dolor')
+    expect(region).toHaveTextContent('Abdomen inferior')
+    expect(region).toHaveTextContent('Ayer')
+    expect(screen.getByText(/^Dolor en abdomen inferior desde ayer/)).toBeInTheDocument()
+    const valorDe = (etiqueta: string) => screen.getAllByText(etiqueta)[0]!.nextElementSibling
+    expect(valorDe('Intensidad')).toHaveTextContent('Falta un dato: no especificado')
+    // La pregunta ya respondida queda marcada en las disponibles.
+    expect(
+      screen.getByRole('button', { name: /ya respondida.*¿Qué sientes\?/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('con dos síntomas, el profesional elige a cuál van los detalles', async () => {
+    const { consulta } = preparar()
+    await empezar()
+    consulta.getState().preguntar(['P1'])
+    laPersonaResponde(consulta, ['DOLOR'])
+    consulta.getState().preguntar(['P1'])
+    laPersonaResponde(consulta, ['TOS'])
+
+    await userEvent.click(await screen.findByRole('button', { name: /¿Desde cuándo\?/ }))
+    const selector = screen.getByRole('combobox', { name: /Sobre qué síntoma/ })
+    expect(selector).toHaveValue('TOS') // por defecto, el último referido
+    await userEvent.selectOptions(selector, 'DOLOR')
+    await userEvent.click(enviar())
+    laPersonaResponde(consulta, ['HOY'])
+    expect(consulta.getState().respuestas.at(-1)).toMatchObject({ ciclo: 1, sintoma: 'DOLOR' })
+  })
+
+  it('descargar el PDF y copiar avisan que salen de MARI (RES4)', async () => {
     const escribir = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: escribir } })
+    vi.stubGlobal(
+      'URL',
+      Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() }),
+    )
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     const { consulta } = preparar()
-    responderTodo(consulta, ['TOS', 'HOY', 'LEVE', 'NO'])
-    consulta.getState().recibirTablet()
-    consulta.getState().verResumen()
+    await empezar()
+    consulta.getState().preguntar(['P1'])
+    laPersonaResponde(consulta, ['TOS'])
 
     await userEvent.click(await screen.findByRole('button', { name: /Copiar texto/ }))
     expect(escribir).toHaveBeenCalledWith(expect.stringContaining('SÍNTOMAS REFERIDOS'))
-    expect(screen.getByRole('status')).toHaveTextContent(/fuera de MARI/)
-    vi.unstubAllGlobals()
+    await userEvent.click(screen.getByRole('button', { name: /Descargar PDF/ }))
+    expect(await screen.findByText(/Descargado resumen-mari-.*fuera de MARI/)).toBeInTheDocument()
   })
 
-  it('descargar PDF genera el archivo sin datos personales en el nombre y avisa', async () => {
-    const crearUrl = vi.fn(() => 'blob:resumen')
-    vi.stubGlobal(
-      'URL',
-      Object.assign(URL, { createObjectURL: crearUrl, revokeObjectURL: vi.fn() }),
-    )
-    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    const { consulta } = preparar()
-    responderTodo(consulta, ['TOS', 'HOY', 'LEVE', 'NO'])
-    consulta.getState().recibirTablet()
-    consulta.getState().verResumen()
-
-    await userEvent.click(await screen.findByRole('button', { name: /Descargar PDF/ }))
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /Descargado resumen-mari-\d{8}-\d{4}\.pdf.*fuera de MARI/,
-    )
-    const [pdf] = crearUrl.mock.calls[0] as unknown as [Blob]
-    expect(pdf.type).toBe('application/pdf')
-    expect(clic).toHaveBeenCalledOnce()
-    vi.unstubAllGlobals()
+  it('sin respuestas, el informe no se puede generar (RES4)', async () => {
+    preparar()
+    await empezar()
+    expect(screen.getByRole('button', { name: /Descargar PDF/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Copiar texto/ })).toBeDisabled()
   })
 
   it('terminar pide confirmación y luego borra todo', async () => {
     const { consulta } = preparar()
-    responderTodo(consulta, ['TOS', 'HOY', 'LEVE', 'NO'])
-    consulta.getState().recibirTablet()
+    await empezar()
+    consulta.getState().preguntar(['P1'])
+    laPersonaResponde(consulta, ['TOS'])
 
     await userEvent.click(await screen.findByRole('button', { name: /Terminar consulta/ }))
-    const dialogo = screen.getByRole('alertdialog')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
-    expect(consulta.getState().respuestas).not.toHaveLength(0)
-
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }),
+    )
+    expect(consulta.getState().respuestas).toHaveLength(1)
     await userEvent.click(screen.getByRole('button', { name: /Terminar consulta/ }))
     await userEvent.click(screen.getByRole('button', { name: /Sí, terminar y borrar/ }))
     expect(consulta.getState()).toMatchObject({ fase: 'inactiva', respuestas: [] })
     expect(screen.getByRole('heading', { name: 'Nueva consulta' })).toBeInTheDocument()
   })
 
-  it('P0 = SÍ: el profesional ve la alerta, toma la tablet y la alerta sigue destacada', async () => {
-    // El banco real todavía no tiene P0: se usa el motor simulado, que sí la tiene.
-    const { consulta } = preparar(crearMotorSimulado())
-    responderTodo(consulta, ['SI'])
-    expect(await screen.findByRole('alert')).toHaveTextContent(/dificultad para respirar/)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Tomar el dispositivo' }))
-    expect(consulta.getState().fase).toBe('profesional')
-    expect(screen.getByText('Sí: avisar al personal')).toBeInTheDocument()
+  it('mientras la persona responde, no se ven sus respuestas', async () => {
+    const { consulta } = preparar()
+    await empezar()
+    consulta.getState().preguntar(['P1'])
+    expect(await screen.findByText(/La persona está respondiendo/)).toBeInTheDocument()
   })
 
-  it('sin respuestas confirmadas no se genera resumen (RES4)', async () => {
-    const { consulta } = preparar()
+  it('P0 = SÍ en el flujo guiado: el profesional ve la alerta y toma el dispositivo', async () => {
+    const { consulta } = preparar(crearMotorSimulado())
     consulta.getState().iniciarConsulta({ preguntarEmbarazo: false })
     consulta.getState().recibirTablet()
-    consulta.getState().entregarAlProfesional()
-    consulta.getState().recibirTablet()
-    expect(await screen.findByText(/No hay respuestas confirmadas/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Ver resumen/ })).toBeDisabled()
+    consulta.getState().proponer({ preguntaId: 'P0', valor: 'SI', origen: 'tactil' })
+    consulta.getState().confirmar()
+    expect(await screen.findByRole('alert')).toHaveTextContent(/dificultad para respirar/)
+    await userEvent.click(screen.getByRole('button', { name: /Tomar/ }))
+    expect(consulta.getState().fase).toBe('profesional')
   })
 })

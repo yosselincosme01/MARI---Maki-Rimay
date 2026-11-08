@@ -286,3 +286,143 @@ describe('privacidad (CNS2)', () => {
     expect(xhr).not.toHaveBeenCalled()
   })
 })
+
+describe('modo conversación (el profesional pregunta)', () => {
+  /** Roles como en el banco: P1 abre un síntoma; P2–P4 son detalles; P7 es simple. */
+  const ROLES: Record<string, { iniciaCiclo?: boolean; porCiclo?: boolean }> = {
+    P1: { iniciaCiclo: true },
+    P2: { porCiclo: true },
+    P3: { porCiclo: true },
+    P4: { porCiclo: true },
+    P7: {},
+  }
+  let conversacion: StoreConsulta
+  let grabadorConv: ReturnType<typeof grabadorEspia>
+
+  beforeEach(() => {
+    let n = 0
+    grabadorConv = grabadorEspia()
+    conversacion = crearConsulta({
+      motor: motorDePrueba(),
+      grabador: grabadorConv,
+      generarId: () => `c-${++n}`,
+      ahora: () => new Date('2026-11-08T10:00:00.000Z'),
+      describir: (id) => ROLES[id],
+    })
+  })
+
+  const c = () => conversacion.getState()
+  /** El profesional envía preguntas; la persona recibe el dispositivo y responde en orden. */
+  function conversar(preguntas: string[], valores: string[], sintoma?: string) {
+    c().preguntar(preguntas, sintoma)
+    c().recibirTablet()
+    for (const valor of valores) {
+      const preguntaId = c().preguntaActiva
+      if (!preguntaId) throw new Error('no hay pregunta activa')
+      c().proponer({ preguntaId, valor, origen: 'tactil' })
+      c().confirmar()
+    }
+    c().recibirTablet() // el profesional recibe el dispositivo
+  }
+
+  it('empieza con el profesional, sin preguntas ni flujo fijo', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    expect(c()).toMatchObject({ fase: 'profesional', preguntaActiva: null, respuestas: [] })
+  })
+
+  it('varias preguntas en fila: la persona las responde seguidas y devuelve el dispositivo una vez', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    c().preguntar(['P1', 'P3'])
+    expect(c()).toMatchObject({ fase: 'entrega-paciente', preguntaActiva: 'P1' })
+    c().recibirTablet()
+    expect(c().fase).toBe('repregunta')
+
+    c().proponer({ preguntaId: 'P1', valor: 'DOLOR', origen: 'sena' })
+    c().confirmar()
+    expect(c()).toMatchObject({ fase: 'repregunta', preguntaActiva: 'P3', envio: { indice: 1 } })
+
+    c().proponer({ preguntaId: 'P3', valor: 'AYER', origen: 'tactil' })
+    c().confirmar()
+    expect(c()).toMatchObject({ fase: 'entrega-profesional', preguntaActiva: null, envio: null })
+  })
+
+  it('"¿Qué sientes?" abre un síntoma y los detalles van al último referido', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    conversar(['P1'], ['DOLOR'])
+    conversar(['P2', 'P3'], ['ABDOMEN_INFERIOR', 'AYER'])
+    conversar(['P1', 'P4'], ['FIEBRE', 'MODERADO'])
+    const r = c().respuestas
+    expect(
+      r.map(({ preguntaId, valor, ciclo, sintoma }) => [preguntaId, valor, ciclo, sintoma]),
+    ).toEqual([
+      ['P1', 'DOLOR', 1, undefined],
+      ['P2', 'ABDOMEN_INFERIOR', 1, 'DOLOR'],
+      ['P3', 'AYER', 1, 'DOLOR'],
+      ['P1', 'FIEBRE', 2, undefined],
+      ['P4', 'MODERADO', 2, 'FIEBRE'],
+    ])
+    // Son respuestas del flujo, no "repreguntas": el resumen las arma como síntomas.
+    expect(r.every((x) => x.repregunta === undefined)).toBe(true)
+  })
+
+  it('el profesional puede asociar los detalles a otro síntoma', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    conversar(['P1'], ['DOLOR'])
+    conversar(['P1'], ['FIEBRE'])
+    conversar(['P3'], ['HOY'], 'DOLOR')
+    expect(c().respuestas.at(-1)).toMatchObject({ preguntaId: 'P3', ciclo: 1, sintoma: 'DOLOR' })
+  })
+
+  it('un detalle sin síntoma referido y una pregunta simple quedan sin ciclo', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    conversar(['P3', 'P7'], ['HOY', 'NO'])
+    expect(c().respuestas.map((x) => x.ciclo)).toEqual([undefined, undefined])
+  })
+
+  it('solo el profesional envía preguntas, y nunca una lista vacía', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    expect(() => c().preguntar([])).toThrow(/No hay preguntas/)
+    c().preguntar(['P1'])
+    expect(() => c().preguntar(['P3'])).toThrow(/fase "entrega-paciente"/)
+  })
+
+  it('terminar borra la conversación y las grabaciones', () => {
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    conversar(['P1'], ['TOS'])
+    c().terminarConsulta()
+    expect(c()).toMatchObject({ fase: 'inactiva', respuestas: [], envio: null })
+    expect(grabadorConv.descartarTodo).toHaveBeenCalledOnce()
+  })
+})
+
+describe('modo conversación: último lote', () => {
+  it('recuerda las respuestas del último envío y lo reinicia en el siguiente', () => {
+    let n = 0
+    const consulta = crearConsulta({
+      motor: motorDePrueba(),
+      grabador: grabadorEspia(),
+      generarId: () => `l-${++n}`,
+      ahora: () => new Date('2026-11-08T10:00:00.000Z'),
+      describir: (id) => (id === 'P1' ? { iniciaCiclo: true } : { porCiclo: true }),
+    })
+    const c = () => consulta.getState()
+    const responder = (preguntas: string[], valores: string[]) => {
+      c().preguntar(preguntas)
+      c().recibirTablet()
+      valores.forEach((valor) => {
+        c().proponer({ preguntaId: c().preguntaActiva!, valor, origen: 'tactil' })
+        c().confirmar()
+      })
+      c().recibirTablet()
+    }
+    c().iniciarConversacion({ preguntarEmbarazo: false })
+    responder(['P1'], ['TOS'])
+    expect(c().ultimoLote).toEqual([c().respuestas[0]!.id])
+    responder(['P3', 'P4'], ['HOY', 'LEVE'])
+    expect(c().ultimoLote).toEqual(
+      c()
+        .respuestas.slice(1)
+        .map((r) => r.id),
+    )
+  })
+})

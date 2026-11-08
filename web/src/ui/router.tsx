@@ -1,5 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router'
-import { Inicio } from '@/ui/pages/Inicio'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { Landing } from '@/ui/pages/Landing'
 import { Paciente } from '@/ui/pages/Paciente'
 import { Profesional } from '@/ui/pages/Profesional'
@@ -7,15 +6,16 @@ import { Profesional } from '@/ui/pages/Profesional'
 /**
  * Rutas de la app. Un solo dispositivo pasa de mano en mano:
  *  /             → página de presentación (landing)
- *  /app          → inicio de la demo; el profesional inicia la consulta
- *  /paciente     → flujo guiado de preguntas en LSP
- *  /profesional  → resumen, repreguntas y avisos
+ *  /app          → entrada de la demo: lleva a la vista del profesional, que inicia todo
+ *  /paciente     → la persona responde las preguntas en LSP
+ *  /profesional  → la consulta: preguntar, resumen en vivo e informe
  *  /recolector   → solo con VITE_RECOLECTOR=true: grabación de señas para entrenar (M3)
  */
 export function crearRutas({ recolector }: { recolector: boolean }): RouteObject[] {
   const rutas: RouteObject[] = [
     { path: '/', element: <Landing /> },
-    { path: '/app', element: <Inicio /> },
+    // Todo empieza con el profesional: sin pantalla de elección ni pulsación larga.
+    { path: '/app', element: <Navigate to="/profesional" replace /> },
     { path: '/paciente', element: <Paciente /> },
     { path: '/profesional', element: <Profesional /> },
   ]

@@ -22,6 +22,27 @@ export interface Dependencias {
   generarId: () => string
   /** Hora actual. Se inyecta para que los tests sean predecibles. */
   ahora: () => Date
+  /**
+   * Modo conversación: qué rol cumple cada pregunta del banco. "iniciaCiclo" abre un síntoma
+   * (¿Qué sientes?); "porCiclo" es un detalle de un síntoma (¿Dónde? ¿Desde cuándo?…).
+   */
+  describir?: (preguntaId: string) => RolPregunta | undefined
+}
+
+export interface RolPregunta {
+  iniciaCiclo?: boolean | undefined
+  porCiclo?: boolean | undefined
+}
+
+/**
+ * Síntomas referidos hasta ahora, del más reciente al más antiguo: cada respuesta que abrió
+ * un ciclo (tiene `ciclo` y no `sintoma`) con su valor.
+ */
+function sintomasReferidos(respuestas: readonly Respuesta[]): { numero: number; valor: string }[] {
+  return respuestas
+    .filter((r) => r.ciclo !== undefined && r.sintoma === undefined && typeof r.valor === 'string')
+    .map((r) => ({ numero: r.ciclo as number, valor: r.valor as string }))
+    .reverse()
 }
 
 export type Consulta = EstadoConsulta & CasosDeUso
@@ -36,6 +57,8 @@ function estadoVacio(): EstadoConsulta {
     preguntaActiva: null,
     ciclo: null,
     repreguntaActiva: null,
+    envio: null,
+    ultimoLote: [],
     provisional: null,
     respuestas: [],
   }
@@ -86,10 +109,32 @@ export function crearConsulta(deps: Dependencias): StoreConsulta {
         })
       },
 
+      iniciarConversacion(config) {
+        exigirFase('iniciar una consulta', 'inactiva')
+        set({ ...estadoVacio(), id: deps.generarId(), fase: 'profesional', config: { ...config } })
+      },
+
+      preguntar(preguntaIds, sintoma) {
+        exigirFase('enviar preguntas', 'profesional')
+        const [primera] = preguntaIds
+        if (primera === undefined) throw new Error('No hay preguntas para enviar.')
+        set({
+          fase: 'entrega-paciente',
+          preguntaActiva: primera,
+          provisional: null,
+          repreguntaActiva: null,
+          ultimoLote: [],
+          envio:
+            sintoma === undefined
+              ? { preguntas: [...preguntaIds], indice: 0 }
+              : { preguntas: [...preguntaIds], indice: 0, sintoma },
+        })
+      },
+
       recibirTablet() {
-        const { fase, repreguntaActiva } = get()
+        const { fase, repreguntaActiva, envio } = get()
         if (fase === 'entrega-paciente') {
-          set({ fase: repreguntaActiva ? 'repregunta' : 'paciente' })
+          set({ fase: repreguntaActiva || envio ? 'repregunta' : 'paciente' })
         } else if (fase === 'entrega-profesional') {
           set({ fase: 'profesional' })
         } else {
@@ -120,6 +165,39 @@ export function crearConsulta(deps: Dependencias): StoreConsulta {
           id: deps.generarId(),
           confirmada: true,
           hora: deps.ahora().toISOString(),
+        }
+
+        // Modo conversación: la respuesta se asocia a su síntoma y sigue la fila de preguntas.
+        if (estado.fase === 'repregunta' && estado.envio) {
+          const rol = deps.describir?.(provisional.preguntaId)
+          if (rol?.iniciaCiclo) {
+            // "¿Qué sientes?" abre un síntoma nuevo.
+            const mayor = Math.max(0, ...estado.respuestas.map((r) => r.ciclo ?? 0))
+            respuesta.ciclo = mayor + 1
+          } else if (rol?.porCiclo) {
+            // Un detalle va con el síntoma elegido por el profesional o con el último referido.
+            const referidos = sintomasReferidos(estado.respuestas)
+            const objetivo = estado.envio.sintoma
+            const ciclo =
+              objetivo === undefined ? referidos[0] : referidos.find((s) => s.valor === objetivo)
+            if (ciclo) {
+              respuesta.ciclo = ciclo.numero
+              respuesta.sintoma = ciclo.valor
+            }
+          }
+          const siguiente = estado.envio.preguntas[estado.envio.indice + 1]
+          set({
+            respuestas: [...estado.respuestas, respuesta],
+            ultimoLote: [...estado.ultimoLote, respuesta.id],
+            provisional: null,
+            ...(siguiente === undefined
+              ? { envio: null, preguntaActiva: null, fase: 'entrega-profesional' as const }
+              : {
+                  envio: { ...estado.envio, indice: estado.envio.indice + 1 },
+                  preguntaActiva: siguiente,
+                }),
+          })
+          return
         }
 
         // Repregunta: se guarda y la tablet vuelve al profesional. El motor no participa.
@@ -163,6 +241,7 @@ export function crearConsulta(deps: Dependencias): StoreConsulta {
           preguntaActiva: null,
           ciclo: null,
           repreguntaActiva: null,
+          envio: null,
         })
       },
 

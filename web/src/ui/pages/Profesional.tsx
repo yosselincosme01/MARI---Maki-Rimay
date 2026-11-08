@@ -1,6 +1,8 @@
 /**
- * Vista del profesional (PRO). Muestra una pantalla según la fase de la consulta:
- * iniciar, esperar a la persona, recibir la tablet, revisar respuestas y ver el resumen.
+ * Vista del profesional (PRO). La consulta es una CONVERSACIÓN guiada por el profesional:
+ * pregunta (escribiendo o eligiendo videos LSP), la persona responde y el resumen se va armando.
+ * Muestra una pantalla según la fase: iniciar, esperar a la persona, recibir el dispositivo y
+ * la consulta en curso (preguntar + resumen en vivo).
  *
  * Solo muestra respuestas CONFIRMADAS (PRO1). El texto sale del resumen con plantilla (RES).
  */
@@ -13,7 +15,7 @@ import {
   ExternalLink,
   FileText,
   Hand,
-  MessageCircleQuestion,
+  MessageSquareReply,
   ShieldCheck,
   Siren,
   Stethoscope,
@@ -25,9 +27,10 @@ import { Boton } from '@/ui/components/base/Boton'
 import { estilosBoton, tarjeta } from '@/ui/components/base/estilos'
 import { PanelAviso } from '@/ui/components/base/PanelAviso'
 import { Logo } from '@/ui/components/Logo'
-import { useBanco, useBuscador, useConsulta, useRecursos } from '@/ui/consulta/contexto'
+import { useBanco, useConsulta, useRecursos } from '@/ui/consulta/contexto'
+import { etiquetaDe } from '@/ui/consulta/recursos'
 import { DocumentoResumen, Originales } from '@/ui/profesional/DocumentoResumen'
-import { Repreguntar } from '@/ui/profesional/Repreguntar'
+import { Preguntar } from '@/ui/profesional/Preguntar'
 
 export function Profesional() {
   const recursos = useRecursos()
@@ -66,9 +69,8 @@ function SegunFase() {
     case 'entrega-profesional':
       return <RecibirTablet />
     case 'profesional':
-      return <Revision />
     case 'resumen':
-      return <ResumenFinal />
+      return <ConsultaEnCurso />
   }
 }
 
@@ -119,39 +121,25 @@ function Encabezado({ titulo, texto }: { titulo: string; texto: string }) {
 /* ─────────────────────────────── Pantallas ─────────────────────────────── */
 
 function IniciarConsulta() {
-  const { iniciarConsulta } = useConsulta()
-  const navegar = useNavigate()
-  const [preguntarEmbarazo, setPreguntarEmbarazo] = useState(false)
-
+  const { iniciarConversacion } = useConsulta()
   return (
     <Marco>
       <section className="flex flex-1 items-center justify-center">
         <div className={cn(tarjeta, 'flex w-full max-w-lg flex-col gap-6 p-8')}>
-          <div className="flex flex-col gap-1">
+          <div className="bg-marca-suave text-marca grid size-14 place-items-center rounded-2xl">
+            <Stethoscope size={28} strokeWidth={1.75} aria-hidden />
+          </div>
+          <div className="flex flex-col gap-2">
             <h1 className="text-3xl">Nueva consulta</h1>
             <p className="text-tinta-suave">
-              Configura la consulta y entrega el dispositivo a la persona.
+              Pregunta a la persona con videos en Lengua de Señas Peruana. Sus respuestas
+              confirmadas forman el resumen para tu informe.
             </p>
           </div>
-          <label className="border-borde hover:border-marca has-[:checked]:border-marca has-[:checked]:bg-marca-suave flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border p-4 transition-colors">
-            <input
-              type="checkbox"
-              className="accent-marca size-6 shrink-0"
-              checked={preguntarEmbarazo}
-              onChange={(e) => setPreguntarEmbarazo(e.target.checked)}
-            />
-            <span className="flex flex-col">
-              <span className="font-medium">Preguntar por embarazo (P9)</span>
-              <span className="text-tinta-suave text-sm">Actívalo solo si corresponde.</span>
-            </span>
-          </label>
           <Boton
             tamano="xl"
             ancho="completo"
-            onClick={() => {
-              iniciarConsulta({ preguntarEmbarazo })
-              void navegar('/paciente')
-            }}
+            onClick={() => iniciarConversacion({ preguntarEmbarazo: false })}
           >
             Iniciar consulta
           </Boton>
@@ -220,75 +208,22 @@ function RecibirTablet() {
   )
 }
 
-/** Revisión de respuestas confirmadas, con los faltantes resaltados (PRO1, PRO2). */
-function Revision() {
-  const banco = useBanco()
-  const buscador = useBuscador()
-  const navegar = useNavigate()
-  const { respuestas, config, verResumen } = useConsulta()
-  const [generado] = useState(() => new Date())
-  const [repreguntando, setRepreguntando] = useState(false)
-  const resumen = generarResumen({ banco, respuestas, config })
-
-  return (
-    <Marco>
-      <Encabezado
-        titulo="Revisión de respuestas"
-        texto="Lo resaltado no fue especificado por la persona: puedes repreguntar antes de cerrar."
-      />
-      {resumen ? (
-        <DocumentoResumen resumen={resumen} generado={generado} resaltarFaltantes />
-      ) : (
-        <p className={cn(tarjeta, 'text-tinta-suave p-5')}>
-          No hay respuestas confirmadas. No se genera resumen.
-        </p>
-      )}
-
-      {repreguntando && buscador ? (
-        <Repreguntar
-          buscador={buscador}
-          alCancelar={() => setRepreguntando(false)}
-          alEnviar={() => void navegar('/paciente')}
-        />
-      ) : (
-        <Acciones>
-          <Boton tamano="lg" onClick={verResumen} disabled={!resumen}>
-            <FileText size={20} aria-hidden /> Ver resumen
-          </Boton>
-          <Boton
-            variante="secundario"
-            tamano="lg"
-            disabled={!buscador}
-            onClick={() => setRepreguntando(true)}
-          >
-            <MessageCircleQuestion size={20} aria-hidden /> Repreguntar
-          </Boton>
-          <TerminarConsulta />
-        </Acciones>
-      )}
-    </Marco>
-  )
-}
-
 type Aviso = { tipo: 'ok' | 'error'; texto: string } | null
 
-/** Resumen final: el documento a la izquierda y las acciones a la derecha (o arriba en tablet). */
-function ResumenFinal() {
+/**
+ * Consulta en curso: a la izquierda, preguntar; a la derecha, el resumen en vivo con lo que
+ * falta resaltado y las acciones del informe (PDF, copiar). Lo recién respondido va arriba.
+ */
+function ConsultaEnCurso() {
   const banco = useBanco()
-  const { respuestas, config } = useConsulta()
+  const navegar = useNavigate()
+  const { respuestas, config, ultimoLote } = useConsulta()
   const [generado] = useState(() => new Date())
   const [aviso, setAviso] = useState<Aviso>(null)
   const [ocupado, setOcupado] = useState(false)
   const resumen = generarResumen({ banco, respuestas, config })
 
-  if (!resumen) {
-    return (
-      <Marco>
-        <p className={cn(tarjeta, 'text-tinta-suave p-5')}>No hay respuestas confirmadas.</p>
-        <TerminarConsulta />
-      </Marco>
-    )
-  }
+  const nuevas = respuestas.filter((r) => ultimoLote.includes(r.id))
 
   async function conPdf(accion: (pdf: Blob, nombre: string) => void) {
     if (!resumen) return
@@ -296,8 +231,8 @@ function ResumenFinal() {
     try {
       const { cargarLogo, crearPdfResumen, nombreArchivoPdf } =
         await import('@/infrastructure/exportacion/resumen-pdf')
-      const pdf = await crearPdfResumen(resumen, { generado, logo: await cargarLogo() })
-      accion(pdf, nombreArchivoPdf(generado))
+      const pdf = await crearPdfResumen(resumen, { generado: new Date(), logo: await cargarLogo() })
+      accion(pdf, nombreArchivoPdf(new Date()))
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo generar el PDF. Usa "Copiar texto".' })
     } finally {
@@ -330,7 +265,7 @@ function ResumenFinal() {
   async function copiar() {
     if (!resumen) return
     try {
-      await navigator.clipboard.writeText(resumenComoTexto(resumen, generado))
+      await navigator.clipboard.writeText(resumenComoTexto(resumen, new Date()))
       setAviso({
         tipo: 'ok',
         texto:
@@ -342,26 +277,72 @@ function ResumenFinal() {
   }
 
   return (
-    <Marco ancho="max-w-6xl">
-      <Encabezado titulo="Resumen de la consulta" texto="Listo para el informe médico." />
+    <Marco ancho="max-w-7xl">
+      <Encabezado
+        titulo="Consulta en curso"
+        texto="Pregunta en LSP y revisa el resumen a medida que la persona responde."
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
-        <aside
-          aria-label="Acciones del resumen"
-          className={cn(tarjeta, 'space-y-3 p-4 lg:sticky lg:top-24 lg:order-2')}
+      {nuevas.length > 0 && (
+        <section
+          aria-label="Respuestas nuevas"
+          role="status"
+          className="border-marca/30 bg-marca-suave rounded-tarjeta flex flex-col gap-2 border p-4"
         >
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <Boton tamano="lg" onClick={descargar} disabled={ocupado}>
-              <Download size={20} aria-hidden /> Descargar PDF
-            </Boton>
-            <Boton variante="secundario" tamano="lg" onClick={verPdf} disabled={ocupado}>
-              <ExternalLink size={20} aria-hidden /> Ver PDF
-            </Boton>
-            <Boton variante="secundario" tamano="lg" onClick={copiar}>
-              <Copy size={20} aria-hidden /> Copiar texto
-            </Boton>
-            <TerminarConsulta />
+          <p className="text-marca flex items-center gap-2 font-semibold">
+            <MessageSquareReply size={18} aria-hidden /> La persona respondió
+          </p>
+          <ul className="flex flex-col gap-1">
+            {nuevas.map((r) => {
+              const pregunta = banco.preguntas.find((p) => p.id === r.preguntaId)
+              const valores = Array.isArray(r.valor) ? r.valor : [r.valor]
+              return (
+                <li key={r.id} className="flex flex-wrap gap-x-2">
+                  <span className="text-tinta-suave">{pregunta?.texto ?? r.preguntaId}</span>
+                  <span className="font-semibold">
+                    {pregunta
+                      ? valores.map((v) => etiquetaDe(pregunta, v)).join(', ')
+                      : valores.join(', ')}
+                  </span>
+                  <span className="text-tinta-suave text-sm">
+                    ({r.origen === 'sena' ? 'seña' : r.origen === 'cuerpo' ? 'cuerpo 3D' : 'táctil'}
+                    )
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        <div className="lg:sticky lg:top-24">
+          <Preguntar alEnviar={() => void navegar('/paciente')} />
+        </div>
+
+        <section aria-labelledby="titulo-resumen" className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="titulo-resumen" className="text-xl">
+              Resumen
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              <Boton tamano="md" onClick={descargar} disabled={ocupado || !resumen}>
+                <Download size={18} aria-hidden /> Descargar PDF
+              </Boton>
+              <Boton
+                variante="secundario"
+                tamano="md"
+                onClick={verPdf}
+                disabled={ocupado || !resumen}
+              >
+                <ExternalLink size={18} aria-hidden /> Ver PDF
+              </Boton>
+              <Boton variante="secundario" tamano="md" onClick={copiar} disabled={!resumen}>
+                <Copy size={18} aria-hidden /> Copiar texto
+              </Boton>
+            </div>
           </div>
+
           {aviso && (
             <p
               role={aviso.tipo === 'ok' ? 'status' : 'alert'}
@@ -378,13 +359,29 @@ function ResumenFinal() {
               {aviso.texto}
             </p>
           )}
-        </aside>
 
-        <div className="space-y-4 lg:order-1">
-          <DocumentoResumen resumen={resumen} generado={generado} />
-          <Originales resumen={resumen} />
-        </div>
+          {resumen ? (
+            <>
+              <DocumentoResumen resumen={resumen} generado={generado} resaltarFaltantes />
+              <Originales resumen={resumen} />
+            </>
+          ) : (
+            <div className={cn(tarjeta, 'flex flex-col items-center gap-3 p-10 text-center')}>
+              <FileText size={36} strokeWidth={1.5} className="text-tinta-suave" aria-hidden />
+              <p className="text-lg font-medium">Aún no hay respuestas</p>
+              <p className="text-tinta-suave max-w-sm">
+                El resumen se armará aquí a medida que la persona responda. Empieza, por ejemplo,
+                con «¿Qué sientes?».
+              </p>
+            </div>
+          )}
+        </section>
       </div>
+
+      <Acciones>
+        <span />
+        <TerminarConsulta />
+      </Acciones>
     </Marco>
   )
 }

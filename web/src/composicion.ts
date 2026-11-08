@@ -22,6 +22,11 @@ export function crearRecursos(): RecursosConsulta {
     grabador: crearGrabadorSimulado(),
     generarId: () => crypto.randomUUID(),
     ahora: () => new Date(),
+    // Modo conversación: qué pregunta abre un síntoma y cuál es un detalle de un síntoma.
+    describir: (id) => {
+      const pregunta = resultado.banco.preguntas.find((p) => p.id === id)
+      return pregunta && { iniciaCiclo: pregunta.iniciaCiclo, porCiclo: pregunta.porCiclo }
+    },
   })
   // El modelo real reemplazará a estos adaptadores sin tocar la interfaz.
   const reconocimiento =

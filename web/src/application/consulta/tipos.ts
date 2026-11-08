@@ -42,12 +42,32 @@ export interface EstadoConsulta {
   ciclo: Ciclo | null
   /** Repregunta enviada por el profesional que la persona aún no responde. */
   repreguntaActiva: { preguntaId: string; sintoma?: string } | null
+  /** Modo conversación: preguntas que el profesional envió en fila y cuál va. */
+  envio: Envio | null
+  /** Modo conversación: IDs de las respuestas del último envío, para mostrarlas como nuevas. */
+  ultimoLote: string[]
   provisional: RespuestaProvisional | null
   respuestas: Respuesta[]
 }
 
+/**
+ * Modo conversación: el profesional envía varias preguntas del banco en fila. La persona las
+ * responde seguidas y el dispositivo vuelve al profesional solo al final.
+ */
+export interface Envio {
+  preguntas: string[]
+  /** Posición de la pregunta activa dentro de `preguntas`. */
+  indice: number
+  /** Síntoma al que se asocian las preguntas de detalle. Si falta, el último referido. */
+  sintoma?: string
+}
+
 export interface CasosDeUso {
   iniciarConsulta(config: ConfigConsulta): void
+  /** Modo conversación: el profesional tiene el dispositivo y pregunta lo que necesita. */
+  iniciarConversacion(config: ConfigConsulta): void
+  /** Modo conversación: envía preguntas del banco en fila a la persona. */
+  preguntar(preguntaIds: string[], sintoma?: string): void
   /** Sale de la pantalla de entrega: la persona o el profesional ya tiene la tablet. */
   recibirTablet(): void
   /** Queda provisional hasta ✓. */

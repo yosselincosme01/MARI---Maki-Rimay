@@ -161,21 +161,22 @@ describe('generarResumen', () => {
     expect(resumen.sintomas).toEqual([])
   })
 
-  it('antecedentes con nombre y valor, P9 solo si el profesional la activó', () => {
-    const respuestas = [
-      r('P7', 'NO'),
-      r('P8', 'SI'),
-      r('P9', 'NO_SE'),
-      r('P10', ['ASMA', 'DIABETES']),
-    ]
+  it('antecedentes con nombre y valor; P9 si se activó o si se respondió', () => {
+    const respuestas = [r('P7', 'NO'), r('P8', 'SI'), r('P10', ['ASMA', 'DIABETES'])]
     expect(resumir(respuestas)!.antecedentes).toEqual([
       { etiqueta: 'Alergias', valor: 'no' },
       { etiqueta: 'Medicación habitual', valor: 'sí' },
       { etiqueta: 'Enfermedades de larga duración', valor: 'asma, diabetes' },
     ])
-    expect(resumir(respuestas, { preguntarEmbarazo: true })!.antecedentes).toContainEqual({
+    // Preguntada durante la conversación, sin activarla al inicio.
+    expect(resumir([...respuestas, r('P9', 'NO_SE')])!.antecedentes).toContainEqual({
       etiqueta: 'Embarazo',
       valor: 'no sabe',
+    })
+    // Activada al inicio pero aún sin respuesta: queda como faltante.
+    expect(resumir(respuestas, { preguntarEmbarazo: true })!.antecedentes).toContainEqual({
+      etiqueta: 'Embarazo',
+      valor: null,
     })
   })
 

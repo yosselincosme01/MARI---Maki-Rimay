@@ -225,7 +225,10 @@ function antecedentes(a: Ayudas, config: ConfigConsulta, banco: Banco): Dato[] {
     { etiqueta: 'Alergias', valor: a.dato('P7', SI_NO) },
     { etiqueta: 'Medicación habitual', valor: a.dato('P8', SI_NO) },
   ]
-  if (config.preguntarEmbarazo) lista.push({ etiqueta: 'Embarazo', valor: a.dato('P9', SI_NO) })
+  // P9 aparece si el profesional la activó o si la preguntó durante la conversación.
+  if (config.preguntarEmbarazo || a.ultima('P9')) {
+    lista.push({ etiqueta: 'Embarazo', valor: a.dato('P9', SI_NO) })
+  }
 
   // P10 es opcional en el MVP: solo aparece si el banco la incluye o si fue respondida.
   const p10 = a.ultima('P10')
