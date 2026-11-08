@@ -1,8 +1,14 @@
 /**
- * Tipos de las respuestas (contrato §5.2).
- * Dueña de la carpeta: Yosselin (BAN). Aquí solo van los tipos que ya fija el contrato;
- * el esquema Zod del banco se agrega en esta misma carpeta.
+ * Tipos del banco de preguntas y de las respuestas (contrato §5.2).
+ * Dueña de la carpeta: Yosselin (BAN). Los tipos del banco salen del esquema Zod (`esquema.ts`).
  */
+import type { z } from 'zod'
+import type { esquemaBanco } from './esquema'
+
+export type Banco = z.infer<typeof esquemaBanco>
+export type Pregunta = Banco['preguntas'][number]
+export type Opcion = Pregunta['opciones'][number]
+export type Regla = NonNullable<Pregunta['siguiente']>[number]
 
 /** Por dónde llegó la respuesta. */
 export type Origen = 'sena' | 'tactil' | 'cuerpo' | 'mensaje-libre'
