@@ -1,0 +1,5 @@
+# Datos de entrenamiento y grabaciones: nunca al repositorio
+ml/datos/
+ml/.venv/
+*.webm
+.DS_Store
