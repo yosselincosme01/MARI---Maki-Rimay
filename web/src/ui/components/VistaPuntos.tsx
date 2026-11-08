@@ -5,7 +5,7 @@
  * La imagen se MUESTRA espejada (como un espejo, más natural para quien señala),
  * pero los datos se extraen de la imagen sin espejar.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Camera, CameraOff, LoaderCircle } from 'lucide-react'
 import { PUNTOS_POSE, type FotogramaCrudo, type Punto } from '@/domain/senas/normalizar'
 import { CONEXIONES_MANO, crearExtractor, type Extractor } from '@/infrastructure/senas/extractor'
@@ -21,9 +21,11 @@ export interface VistaPuntosProps {
   alFotograma?: (fotograma: FotogramaCrudo, tiempoMs: number) => void
   /** Se llama cuando el extractor está listo, con el delegado usado (GPU/CPU). */
   alListo?: (extractor: Extractor) => void
+  /** Contenido sobre la cámara cuando está lista (p. ej. la cuenta regresiva). */
+  superposicion?: ReactNode
 }
 
-export function VistaPuntos({ alFotograma, alListo }: VistaPuntosProps) {
+export function VistaPuntos({ alFotograma, alListo, superposicion }: VistaPuntosProps) {
   const video = useRef<HTMLVideoElement>(null)
   const lienzo = useRef<HTMLCanvasElement>(null)
   const [estado, setEstado] = useState<Estado>({ tipo: 'apagada' })
@@ -137,6 +139,7 @@ export function VistaPuntos({ alFotograma, alListo }: VistaPuntosProps) {
           aria-hidden
         />
 
+        {estado.tipo === 'lista' && superposicion}
         {estado.tipo !== 'lista' && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center text-white">
             {estado.tipo === 'apagada' && (

@@ -27,6 +27,16 @@ html {
   --radius-boton: 1.25rem;
 }
 
+/* Barra de progreso de la grabación en /recolector. */
+@keyframes llenar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 @layer base {
   html {
     /* Base de 18px: la app debe poder usarse con poca lectura y en tablets. */
