@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -15,6 +15,8 @@ beforeEach(() => {
   // jsdom no reproduce video.
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+  // jsdom no tiene WebGL: P2 usa la lista de zonas, que es el respaldo del cuerpo 3D (CUE2).
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
 })
 
 // Vitest corre sin `globals`, así que Testing Library no limpia sola entre tests.
@@ -63,29 +65,45 @@ function mostrar(recursos: RecursosConsulta) {
   return userEvent.setup()
 }
 
-/** Inicia la consulta de prueba y recibe la tablet. */
-async function empezar(usuario: ReturnType<typeof userEvent.setup>) {
-  await usuario.click(screen.getByRole('button', { name: 'Iniciar consulta' }))
+/**
+ * El profesional inicia la consulta (en su vista) y la persona recibe la tablet.
+ * Aquí se inicia directamente en la consulta, como lo hace la vista profesional.
+ */
+async function empezar(
+  usuario: ReturnType<typeof userEvent.setup>,
+  recursos: RecursosConsulta & { ok: true },
+  preguntarEmbarazo = false,
+) {
+  act(() => recursos.consulta.getState().iniciarConsulta({ preguntarEmbarazo }))
   expect(screen.getByRole('heading', { name: 'Entregue la tablet a la persona' })).toBeVisible()
   await usuario.click(screen.getByRole('button', { name: 'Ya tengo la tablet' }))
 }
 
 async function responder(usuario: ReturnType<typeof userEvent.setup>, opcion: string) {
   await usuario.click(screen.getByRole('button', { name: opcion }))
-  await usuario.click(screen.getByRole('button', { name: 'Sí, es eso' }))
+  await usuario.click(screen.getByRole('button', { name: 'Sí, es correcto' }))
 }
 
 describe('Vista paciente', () => {
-  it('sin consulta, ofrece el inicio de prueba', () => {
+  it('sin consulta, indica que la inicia el profesional', () => {
     mostrar(recursosReales())
     expect(screen.getByRole('heading', { name: 'No hay una consulta en curso' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/app')
+  })
+
+  it('muestra el número de pregunta en la barra superior', async () => {
+    const recursos = recursosReales()
+    const usuario = mostrar(recursos)
+    await empezar(usuario, recursos)
+    expect(screen.getByText('Pregunta 1')).toBeVisible()
+    await responder(usuario, 'Tos')
+    expect(screen.getByText('Pregunta 2')).toBeVisible()
   })
 
   it('recorre las 6 preguntas por toque y entrega la tablet al profesional', async () => {
     const recursos = recursosReales()
     const usuario = mostrar(recursos)
-    await usuario.click(screen.getByRole('checkbox', { name: /embarazo/ }))
-    await empezar(usuario)
+    await empezar(usuario, recursos, true)
 
     expect(screen.getByRole('heading', { name: '¿Qué sientes?' })).toBeVisible()
     await responder(usuario, 'Dolor')
@@ -119,7 +137,7 @@ describe('Vista paciente', () => {
   it('una respuesta queda provisional hasta ✓; ✗ la descarta y vuelve a las opciones', async () => {
     const recursos = recursosReales()
     const usuario = mostrar(recursos)
-    await empezar(usuario)
+    await empezar(usuario, recursos)
 
     await usuario.click(screen.getByRole('button', { name: 'Tos' }))
     const confirmar = screen.getByRole('region', { name: 'Confirmar respuesta' })
@@ -135,9 +153,9 @@ describe('Vista paciente', () => {
   it('un doble toque en ✓ guarda una sola respuesta', async () => {
     const recursos = recursosReales()
     const usuario = mostrar(recursos)
-    await empezar(usuario)
+    await empezar(usuario, recursos)
     await usuario.click(screen.getByRole('button', { name: 'Fiebre' }))
-    await usuario.dblClick(screen.getByRole('button', { name: 'Sí, es eso' }))
+    await usuario.dblClick(screen.getByRole('button', { name: 'Sí, es correcto' }))
     expect(recursos.consulta.getState().respuestas).toHaveLength(1)
     expect(screen.getByRole('heading', { name: '¿Desde cuándo?' })).toBeVisible()
   })
@@ -145,14 +163,15 @@ describe('Vista paciente', () => {
   it('"otra / no está aquí" se confirma como OTRA', async () => {
     const recursos = recursosReales()
     const usuario = mostrar(recursos)
-    await empezar(usuario)
+    await empezar(usuario, recursos)
     await responder(usuario, 'Otra / no está aquí')
     expect(recursos.consulta.getState().respuestas[0]).toMatchObject({ valor: 'OTRA' })
   })
 
   it('un video validado se reproduce sin etiqueta, aun sin modo demo', async () => {
-    const usuario = mostrar(recursosReales())
-    await empezar(usuario)
+    const recursos = recursosReales()
+    const usuario = mostrar(recursos)
+    await empezar(usuario, recursos)
     expect(document.querySelector('video')).toHaveAttribute(
       'src',
       '/videos/preguntas/01-que-sientes.mp4',
@@ -161,15 +180,17 @@ describe('Vista paciente', () => {
   })
 
   it('sin modo demo, un video no validado aparece como "video pendiente"', async () => {
-    const usuario = mostrar(recursosReales({ validado: false }))
-    await empezar(usuario)
+    const recursos = recursosReales({ validado: false })
+    const usuario = mostrar(recursos)
+    await empezar(usuario, recursos)
     expect(screen.getByRole('img', { name: /Video pendiente/ })).toBeVisible()
     expect(document.querySelector('video')).toBeNull()
   })
 
   it('en modo demo, un video no validado se reproduce con la etiqueta "Video no validado"', async () => {
-    const usuario = mostrar(recursosReales({ modoDemo: true, validado: false }))
-    await empezar(usuario)
+    const recursos = recursosReales({ modoDemo: true, validado: false })
+    const usuario = mostrar(recursos)
+    await empezar(usuario, recursos)
     const video = document.querySelector('video')
     expect(video).not.toBeNull()
     expect(video).toHaveAttribute('src', '/videos/preguntas/01-que-sientes.mp4')
@@ -180,6 +201,6 @@ describe('Vista paciente', () => {
   it('con un banco inválido muestra los errores y no permite iniciar', () => {
     mostrar({ ok: false, errores: ['P2 › video: requerido'], modoDemo: false })
     expect(screen.getByRole('alert')).toHaveTextContent('P2 › video: requerido')
-    expect(screen.queryByRole('button', { name: 'Iniciar consulta' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Ya tengo la tablet' })).toBeNull()
   })
 })

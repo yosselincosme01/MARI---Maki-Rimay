@@ -20,6 +20,10 @@ import {
   Trash2,
 } from 'lucide-react'
 import { generarResumen, resumenComoTexto } from '@/domain/resumen/resumen'
+import { cn } from '@/ui/cn'
+import { Boton } from '@/ui/components/base/Boton'
+import { estilosBoton, tarjeta } from '@/ui/components/base/estilos'
+import { PanelAviso } from '@/ui/components/base/PanelAviso'
 import { Logo } from '@/ui/components/Logo'
 import { useBanco, useConsulta, useRecursos } from '@/ui/consulta/contexto'
 import { DocumentoResumen, Originales } from '@/ui/profesional/DocumentoResumen'
@@ -29,7 +33,10 @@ export function Profesional() {
   if (!recursos.ok) {
     return (
       <Marco>
-        <p role="alert" className="text-alerta font-semibold">
+        <p
+          role="alert"
+          className={cn(tarjeta, 'border-alerta/30 bg-alerta-suave text-alerta p-5 font-semibold')}
+        >
           El banco de preguntas tiene errores: no se puede iniciar una consulta.
         </p>
       </Marco>
@@ -41,7 +48,11 @@ export function Profesional() {
 function SegunFase() {
   const { fase } = useConsulta()
   // Cada pantalla nueva empieza arriba (si no, el resumen se abriría a mitad de página).
-  useEffect(() => window.scrollTo({ top: 0 }), [fase])
+  // Con llaves: en Chromium reciente scrollTo devuelve una promesa, y un efecto que devuelve
+  // algo que no es una función rompe React ("destroy is not a function").
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [fase])
   switch (fase) {
     case 'inactiva':
       return <IniciarConsulta />
@@ -64,26 +75,45 @@ function SegunFase() {
 
 function Marco({ children, ancho = 'max-w-4xl' }: { children: ReactNode; ancho?: string }) {
   return (
-    <main className={`mx-auto flex min-h-dvh w-full ${ancho} flex-col gap-6 p-4 sm:p-6 lg:p-8`}>
-      <header className="flex items-center justify-between gap-4">
-        <Logo className="h-10 w-auto" />
-        <span className="text-tinta/60 flex items-center gap-2 text-sm font-semibold">
-          <Stethoscope size={18} aria-hidden /> Vista del profesional
-        </span>
+    <div className="flex min-h-dvh flex-col">
+      <header className="border-borde bg-superficie/90 sticky top-0 z-20 border-b backdrop-blur">
+        <div
+          className={cn('mx-auto flex h-16 items-center justify-between gap-4 px-4 sm:px-6', ancho)}
+        >
+          <Logo className="h-9 w-auto" />
+          <span className="bg-superficie-2 text-tinta-suave flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium">
+            <Stethoscope size={16} aria-hidden /> Vista del profesional
+          </span>
+        </div>
       </header>
-      {children}
-      <p className="text-tinta/60 mt-auto flex items-start gap-2 pt-6 text-sm">
-        <ShieldCheck size={18} className="text-marca shrink-0" aria-hidden />
-        MARI no conserva datos: todo se borra al terminar la consulta, recargar o cerrar la página.
-      </p>
-    </main>
+      <main className={cn('mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-8 sm:px-6', ancho)}>
+        {children}
+      </main>
+      <footer className="border-borde border-t">
+        <p
+          className={cn(
+            'text-tinta-suave mx-auto flex items-start gap-2 px-4 py-4 text-sm sm:px-6',
+            ancho,
+          )}
+        >
+          <ShieldCheck size={18} className="text-marca shrink-0" aria-hidden />
+          MARI no conserva datos: todo se borra al terminar la consulta, recargar o cerrar la
+          página.
+        </p>
+      </footer>
+    </div>
   )
 }
 
-const botonPrincipal =
-  'bg-marca hover:bg-marca-oscuro rounded-boton flex min-h-14 items-center justify-center gap-2 px-6 font-semibold whitespace-nowrap text-white disabled:opacity-40 [&>svg]:shrink-0'
-const botonSecundario =
-  'bg-superficie rounded-boton text-tinta flex min-h-14 items-center justify-center gap-2 px-6 font-semibold whitespace-nowrap ring-2 ring-black/10 hover:ring-marca disabled:opacity-40 [&>svg]:shrink-0'
+/** Encabezado de las pantallas de trabajo (revisión y resumen). */
+function Encabezado({ titulo, texto }: { titulo: string; texto: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <h1 className="text-3xl">{titulo}</h1>
+      <p className="text-tinta-suave">{texto}</p>
+    </div>
+  )
+}
 
 /* ─────────────────────────────── Pantallas ─────────────────────────────── */
 
@@ -94,27 +124,37 @@ function IniciarConsulta() {
 
   return (
     <Marco>
-      <section className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6">
-        <h1 className="text-3xl font-bold">Nueva consulta</h1>
-        <label className="flex min-h-12 items-center gap-3">
-          <input
-            type="checkbox"
-            className="accent-marca size-6"
-            checked={preguntarEmbarazo}
-            onChange={(e) => setPreguntarEmbarazo(e.target.checked)}
-          />
-          Preguntar por embarazo (P9)
-        </label>
-        <button
-          type="button"
-          className={botonPrincipal}
-          onClick={() => {
-            iniciarConsulta({ preguntarEmbarazo })
-            void navegar('/paciente')
-          }}
-        >
-          Iniciar consulta
-        </button>
+      <section className="flex flex-1 items-center justify-center">
+        <div className={cn(tarjeta, 'flex w-full max-w-lg flex-col gap-6 p-8')}>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl">Nueva consulta</h1>
+            <p className="text-tinta-suave">
+              Configura la consulta y entrega la tablet a la persona.
+            </p>
+          </div>
+          <label className="border-borde hover:border-marca has-[:checked]:border-marca has-[:checked]:bg-marca-suave flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border p-4 transition-colors">
+            <input
+              type="checkbox"
+              className="accent-marca size-6 shrink-0"
+              checked={preguntarEmbarazo}
+              onChange={(e) => setPreguntarEmbarazo(e.target.checked)}
+            />
+            <span className="flex flex-col">
+              <span className="font-medium">Preguntar por embarazo (P9)</span>
+              <span className="text-tinta-suave text-sm">Actívalo solo si corresponde.</span>
+            </span>
+          </label>
+          <Boton
+            tamano="xl"
+            ancho="completo"
+            onClick={() => {
+              iniciarConsulta({ preguntarEmbarazo })
+              void navegar('/paciente')
+            }}
+          >
+            Iniciar consulta
+          </Boton>
+        </div>
       </section>
     </Marco>
   )
@@ -123,16 +163,15 @@ function IniciarConsulta() {
 function ConLaPersona() {
   return (
     <Marco>
-      <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-        <Hand size={72} className="text-marca" aria-hidden />
-        <h1 className="text-3xl font-bold">La persona está respondiendo</h1>
-        <p className="text-tinta/70 max-w-md">
-          Las respuestas aparecerán aquí cuando te devuelva la tablet.
-        </p>
-        <Link to="/paciente" className="text-marca text-lg font-semibold underline">
+      <PanelAviso
+        icono={<Hand size={44} strokeWidth={1.75} aria-hidden />}
+        titulo="La persona está respondiendo"
+        texto="Las respuestas aparecerán aquí cuando te devuelva la tablet."
+      >
+        <Link to="/paciente" className={estilosBoton({ variante: 'secundario', tamano: 'lg' })}>
           Ir a la vista de la persona
         </Link>
-      </section>
+      </PanelAviso>
     </Marco>
   )
 }
@@ -142,26 +181,24 @@ function AlertaRecibida() {
   const { entregarAlProfesional, recibirTablet } = useConsulta()
   return (
     <Marco>
-      <section
-        role="alert"
-        className="flex flex-1 flex-col items-center justify-center gap-6 text-center"
+      <PanelAviso
+        rol="alert"
+        tono="alerta"
+        icono={<Siren size={44} strokeWidth={1.75} aria-hidden />}
+        titulo="La persona refiere dificultad para respirar o dolor fuerte en el pecho"
+        texto="MARI detuvo las preguntas. No clasifica urgencias."
       >
-        <Siren size={72} className="text-alerta" aria-hidden />
-        <h1 className="text-alerta text-3xl font-bold">
-          La persona refiere dificultad para respirar o dolor fuerte en el pecho
-        </h1>
-        <p className="text-tinta/70 max-w-md">MARI detuvo las preguntas. No clasifica urgencias.</p>
-        <button
-          type="button"
-          className={botonPrincipal}
+        <Boton
+          tamano="xl"
+          ancho="completo"
           onClick={() => {
             entregarAlProfesional()
             recibirTablet()
           }}
         >
           Tomar la tablet
-        </button>
-      </section>
+        </Boton>
+      </PanelAviso>
     </Marco>
   )
 }
@@ -170,13 +207,14 @@ function RecibirTablet() {
   const { recibirTablet } = useConsulta()
   return (
     <Marco>
-      <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-        <Stethoscope size={72} className="text-marca" aria-hidden />
-        <h1 className="text-3xl font-bold">La persona terminó de responder</h1>
-        <button type="button" className={botonPrincipal} onClick={recibirTablet}>
+      <PanelAviso
+        icono={<Stethoscope size={44} strokeWidth={1.75} aria-hidden />}
+        titulo="La persona terminó de responder"
+      >
+        <Boton tamano="xl" ancho="completo" onClick={recibirTablet}>
           Recibir la tablet
-        </button>
-      </section>
+        </Boton>
+      </PanelAviso>
     </Marco>
   )
 }
@@ -190,39 +228,32 @@ function Revision() {
 
   return (
     <Marco>
-      <div>
-        <h1 className="text-3xl font-bold">Revisión de respuestas</h1>
-        <p className="text-tinta/70 mt-1">
-          Lo resaltado no fue especificado por la persona: puedes repreguntar antes de cerrar.
-        </p>
-      </div>
+      <Encabezado
+        titulo="Revisión de respuestas"
+        texto="Lo resaltado no fue especificado por la persona: puedes repreguntar antes de cerrar."
+      />
       {resumen ? (
         <DocumentoResumen resumen={resumen} generado={generado} resaltarFaltantes />
       ) : (
-        <p className="bg-superficie rounded-2xl p-5 ring-1 ring-black/10">
+        <p className={cn(tarjeta, 'text-tinta-suave p-5')}>
           No hay respuestas confirmadas. No se genera resumen.
         </p>
       )}
 
-      <div className="flex flex-wrap items-start gap-3">
+      <Acciones>
+        <Boton tamano="lg" onClick={verResumen} disabled={!resumen}>
+          <FileText size={20} aria-hidden /> Ver resumen
+        </Boton>
         <div className="flex flex-col">
-          <button
-            type="button"
-            className={botonSecundario}
-            disabled
-            aria-describedby="repreguntar-pronto"
-          >
+          <Boton variante="secundario" tamano="lg" disabled aria-describedby="repreguntar-pronto">
             <MessageCircleQuestion size={20} aria-hidden /> Repreguntar
-          </button>
-          <span id="repreguntar-pronto" className="text-tinta/60 mt-1 text-xs">
+          </Boton>
+          <span id="repreguntar-pronto" className="text-tinta-suave mt-1 text-xs">
             Disponible pronto (búsqueda de repreguntas)
           </span>
         </div>
-        <button type="button" className={botonPrincipal} onClick={verResumen} disabled={!resumen}>
-          <FileText size={20} aria-hidden /> Ver resumen
-        </button>
         <TerminarConsulta />
-      </div>
+      </Acciones>
     </Marco>
   )
 }
@@ -241,7 +272,7 @@ function ResumenFinal() {
   if (!resumen) {
     return (
       <Marco>
-        <p>No hay respuestas confirmadas.</p>
+        <p className={cn(tarjeta, 'text-tinta-suave p-5')}>No hay respuestas confirmadas.</p>
         <TerminarConsulta />
       </Marco>
     )
@@ -300,34 +331,34 @@ function ResumenFinal() {
 
   return (
     <Marco ancho="max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold">Resumen de la consulta</h1>
-        <p className="text-tinta/70 mt-1">Listo para el informe médico.</p>
-      </div>
+      <Encabezado titulo="Resumen de la consulta" texto="Listo para el informe médico." />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
         <aside
           aria-label="Acciones del resumen"
-          className="bg-superficie space-y-3 rounded-2xl p-4 ring-1 ring-black/5 lg:sticky lg:top-6 lg:order-2"
+          className={cn(tarjeta, 'space-y-3 p-4 lg:sticky lg:top-24 lg:order-2')}
         >
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <button type="button" className={botonPrincipal} onClick={descargar} disabled={ocupado}>
+            <Boton tamano="lg" onClick={descargar} disabled={ocupado}>
               <Download size={20} aria-hidden /> Descargar PDF
-            </button>
-            <button type="button" className={botonSecundario} onClick={verPdf} disabled={ocupado}>
+            </Boton>
+            <Boton variante="secundario" tamano="lg" onClick={verPdf} disabled={ocupado}>
               <ExternalLink size={20} aria-hidden /> Ver PDF
-            </button>
-            <button type="button" className={botonSecundario} onClick={copiar}>
+            </Boton>
+            <Boton variante="secundario" tamano="lg" onClick={copiar}>
               <Copy size={20} aria-hidden /> Copiar texto
-            </button>
+            </Boton>
             <TerminarConsulta />
           </div>
           {aviso && (
             <p
               role={aviso.tipo === 'ok' ? 'status' : 'alert'}
-              className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
-                aviso.tipo === 'ok' ? 'bg-cruz/10' : 'bg-alerta/10 text-alerta'
-              }`}
+              className={cn(
+                'flex items-start gap-2 rounded-xl border p-3 text-sm',
+                aviso.tipo === 'ok'
+                  ? 'border-cruz/30 bg-cruz/5'
+                  : 'border-alerta/30 bg-alerta-suave text-alerta',
+              )}
             >
               {aviso.tipo === 'ok' && (
                 <ClipboardCheck size={18} className="text-cruz shrink-0" aria-hidden />
@@ -346,6 +377,15 @@ function ResumenFinal() {
   )
 }
 
+/** Barra de acciones al pie del contenido; "Terminar" queda a la derecha, separada. */
+function Acciones({ children }: { children: ReactNode }) {
+  return (
+    <div className="border-borde flex flex-wrap items-start gap-3 border-t pt-6 [&>*:last-child]:ml-auto">
+      {children}
+    </div>
+  )
+}
+
 /** Terminar pide confirmación: después no hay forma de recuperar nada. */
 function TerminarConsulta() {
   const { terminarConsulta } = useConsulta()
@@ -353,34 +393,30 @@ function TerminarConsulta() {
 
   if (!confirmando) {
     return (
-      <button type="button" className={botonSecundario} onClick={() => setConfirmando(true)}>
+      <Boton variante="peligro" tamano="lg" onClick={() => setConfirmando(true)}>
         <Trash2 size={20} aria-hidden /> Terminar consulta
-      </button>
+      </Boton>
     )
   }
   return (
     <div
       role="alertdialog"
       aria-labelledby="terminar-titulo"
-      className="bg-alerta/10 col-span-full flex flex-wrap items-center gap-3 rounded-2xl p-3"
+      className="border-alerta/30 bg-alerta-suave col-span-full flex flex-wrap items-center gap-3 rounded-xl border p-3"
     >
-      <p id="terminar-titulo" className="font-semibold">
+      <p id="terminar-titulo" className="px-1 font-semibold">
         Se borrarán todas las respuestas. ¿Terminar?
       </p>
-      <button
-        type="button"
-        className="bg-alerta rounded-boton min-h-12 px-5 font-semibold text-white"
+      <Boton
+        tamano="md"
+        className="bg-alerta hover:bg-alerta hover:brightness-95"
         onClick={terminarConsulta}
       >
         Sí, terminar y borrar
-      </button>
-      <button
-        type="button"
-        className="min-h-12 px-4 font-semibold underline"
-        onClick={() => setConfirmando(false)}
-      >
+      </Boton>
+      <Boton variante="fantasma" tamano="md" onClick={() => setConfirmando(false)}>
         Cancelar
-      </button>
+      </Boton>
     </div>
   )
 }
