@@ -95,8 +95,12 @@ describe('Vista profesional (PRO)', () => {
     const sintoma = screen.getByText(
       'Dolor en abdomen inferior desde ayer, intensidad fuerte, evolución no especificada.',
     )
-    expect(sintoma.closest('li')).toHaveTextContent('Falta un dato')
-    expect(screen.getByText('Alergias: no.').closest('li')).not.toHaveTextContent('Falta un dato')
+    expect(sintoma).toBeInTheDocument()
+    // Cada dato junto a su nombre; el que falta se resalta, el dicho no.
+    const valorDe = (etiqueta: string) => screen.getAllByText(etiqueta)[0]!.nextElementSibling
+    expect(valorDe('Evolución')).toHaveTextContent('Falta un dato: no especificado')
+    expect(valorDe('Intensidad')).toHaveTextContent(/^fuerte$/)
+    expect(valorDe('Alergias')).toHaveTextContent(/^no$/)
   })
 
   it('ofrece Repreguntar (pronto), Ver resumen y Terminar consulta (PRO2)', async () => {
@@ -109,29 +113,57 @@ describe('Vista profesional (PRO)', () => {
     expect(screen.getByText(/MARI no conserva datos/)).toBeInTheDocument()
   })
 
-  it('el resumen tiene las 5 secciones, las originales y el cierre; copiar avisa (RES1–RES4)', async () => {
-    const escribir = vi.fn().mockResolvedValue(undefined)
-    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: escribir } })
+  it('el resumen tiene sus secciones, las originales y el cierre; sin "Repreguntas" (RES1–RES3)', async () => {
     const { consulta } = preparar()
     responderTodo(consulta, ['FIEBRE', 'HOY', 'MODERADO', 'SI'])
     consulta.getState().recibirTablet()
     await userEvent.click(await screen.findByRole('button', { name: /Ver resumen/ }))
 
-    for (const seccion of [
-      'Alerta inicial',
-      'Síntomas referidos',
-      'Antecedentes',
-      'Repreguntas',
-      'Mensaje libre en LSP',
-    ]) {
+    for (const seccion of ['Alerta inicial', 'Síntomas referidos', 'Antecedentes']) {
       expect(screen.getByRole('heading', { name: seccion })).toBeInTheDocument()
     }
+    // Las secciones vacías no aparecen; las repreguntas van dentro de su síntoma.
+    expect(screen.queryByRole('heading', { name: /Repreguntas|Mensaje libre/ })).toBeNull()
+    expect(
+      screen.getByText('Síntomas referidos', { selector: 'dt' }).nextElementSibling,
+    ).toHaveTextContent('1')
     expect(screen.getByText(/Respuestas originales \(4\)/)).toBeInTheDocument()
-    expect(screen.getByText(/No constituye diagnóstico/)).toBeInTheDocument()
+    expect(screen.getAllByText(/No constituye diagnóstico/).length).toBeGreaterThan(0)
+  })
 
-    await userEvent.click(screen.getByRole('button', { name: /Copiar resumen/ }))
+  it('copiar texto avisa que el portapapeles queda fuera de MARI (RES4)', async () => {
+    const escribir = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: escribir } })
+    const { consulta } = preparar()
+    responderTodo(consulta, ['TOS', 'HOY', 'LEVE', 'NO'])
+    consulta.getState().recibirTablet()
+    consulta.getState().verResumen()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Copiar texto/ }))
     expect(escribir).toHaveBeenCalledWith(expect.stringContaining('SÍNTOMAS REFERIDOS'))
     expect(screen.getByRole('status')).toHaveTextContent(/fuera de MARI/)
+    vi.unstubAllGlobals()
+  })
+
+  it('descargar PDF genera el archivo sin datos personales en el nombre y avisa', async () => {
+    const crearUrl = vi.fn(() => 'blob:resumen')
+    vi.stubGlobal(
+      'URL',
+      Object.assign(URL, { createObjectURL: crearUrl, revokeObjectURL: vi.fn() }),
+    )
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { consulta } = preparar()
+    responderTodo(consulta, ['TOS', 'HOY', 'LEVE', 'NO'])
+    consulta.getState().recibirTablet()
+    consulta.getState().verResumen()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Descargar PDF/ }))
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /Descargado resumen-mari-\d{8}-\d{4}\.pdf.*fuera de MARI/,
+    )
+    const [pdf] = crearUrl.mock.calls[0] as unknown as [Blob]
+    expect(pdf.type).toBe('application/pdf')
+    expect(clic).toHaveBeenCalledOnce()
     vi.unstubAllGlobals()
   })
 
@@ -159,7 +191,7 @@ describe('Vista profesional (PRO)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Tomar la tablet' }))
     expect(consulta.getState().fase).toBe('profesional')
-    expect(screen.getAllByRole('alert')[0]).toHaveTextContent(/Alerta inicial/)
+    expect(screen.getByText('Sí: avisar al personal')).toBeInTheDocument()
   })
 
   it('sin respuestas confirmadas no se genera resumen (RES4)', async () => {
