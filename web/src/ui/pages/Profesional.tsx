@@ -4,11 +4,13 @@
  *
  * Solo muestra respuestas CONFIRMADAS (PRO1). El texto sale del resumen con plantilla (RES).
  */
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
   ClipboardCheck,
   Copy,
+  Download,
+  ExternalLink,
   FileText,
   Hand,
   MessageCircleQuestion,
@@ -16,12 +18,11 @@ import {
   Siren,
   Stethoscope,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react'
-import type { Respuesta } from '@/domain/banco/tipos'
-import { generarResumen, horaCorta, resumenComoTexto, type Resumen } from '@/domain/resumen/resumen'
+import { generarResumen, resumenComoTexto } from '@/domain/resumen/resumen'
 import { Logo } from '@/ui/components/Logo'
 import { useBanco, useConsulta, useRecursos } from '@/ui/consulta/contexto'
+import { DocumentoResumen, Originales } from '@/ui/profesional/DocumentoResumen'
 
 export function Profesional() {
   const recursos = useRecursos()
@@ -39,6 +40,8 @@ export function Profesional() {
 
 function SegunFase() {
   const { fase } = useConsulta()
+  // Cada pantalla nueva empieza arriba (si no, el resumen se abriría a mitad de página).
+  useEffect(() => window.scrollTo({ top: 0 }), [fase])
   switch (fase) {
     case 'inactiva':
       return <IniciarConsulta />
@@ -59,9 +62,9 @@ function SegunFase() {
 
 /* ─────────────────────────────── Piezas comunes ─────────────────────────────── */
 
-function Marco({ children }: { children: ReactNode }) {
+function Marco({ children, ancho = 'max-w-4xl' }: { children: ReactNode; ancho?: string }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-6 p-4 sm:p-6">
+    <main className={`mx-auto flex min-h-dvh w-full ${ancho} flex-col gap-6 p-4 sm:p-6 lg:p-8`}>
       <header className="flex items-center justify-between gap-4">
         <Logo className="h-10 w-auto" />
         <span className="text-tinta/60 flex items-center gap-2 text-sm font-semibold">
@@ -78,13 +81,9 @@ function Marco({ children }: { children: ReactNode }) {
 }
 
 const botonPrincipal =
-  'bg-marca hover:bg-marca-oscuro rounded-boton flex min-h-14 items-center justify-center gap-2 px-6 font-semibold text-white disabled:opacity-40'
+  'bg-marca hover:bg-marca-oscuro rounded-boton flex min-h-14 items-center justify-center gap-2 px-6 font-semibold whitespace-nowrap text-white disabled:opacity-40 [&>svg]:shrink-0'
 const botonSecundario =
-  'bg-superficie rounded-boton text-tinta flex min-h-14 items-center justify-center gap-2 px-6 font-semibold ring-2 ring-black/10 hover:ring-marca disabled:opacity-40'
-
-/** Respuestas que marcan una alerta o un pedido, para destacarlos arriba. */
-const respondio = (respuestas: Respuesta[], preguntaId: string, valor: string) =>
-  respuestas.some((r) => r.preguntaId === preguntaId && r.valor === valor)
+  'bg-superficie rounded-boton text-tinta flex min-h-14 items-center justify-center gap-2 px-6 font-semibold whitespace-nowrap ring-2 ring-black/10 hover:ring-marca disabled:opacity-40 [&>svg]:shrink-0'
 
 /* ─────────────────────────────── Pantallas ─────────────────────────────── */
 
@@ -186,21 +185,26 @@ function RecibirTablet() {
 function Revision() {
   const banco = useBanco()
   const { respuestas, config, verResumen } = useConsulta()
+  const [generado] = useState(() => new Date())
   const resumen = generarResumen({ banco, respuestas, config })
 
   return (
     <Marco>
-      <h1 className="text-3xl font-bold">Revisión de respuestas</h1>
-      <Avisos respuestas={respuestas} />
+      <div>
+        <h1 className="text-3xl font-bold">Revisión de respuestas</h1>
+        <p className="text-tinta/70 mt-1">
+          Lo resaltado no fue especificado por la persona: puedes repreguntar antes de cerrar.
+        </p>
+      </div>
       {resumen ? (
-        <Secciones resumen={resumen} resaltarFaltantes />
+        <DocumentoResumen resumen={resumen} generado={generado} resaltarFaltantes />
       ) : (
         <p className="bg-superficie rounded-2xl p-5 ring-1 ring-black/10">
           No hay respuestas confirmadas. No se genera resumen.
         </p>
       )}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <div className="flex flex-col">
           <button
             type="button"
@@ -223,54 +227,121 @@ function Revision() {
   )
 }
 
+type Aviso = { tipo: 'ok' | 'error'; texto: string } | null
+
+/** Resumen final: el documento a la izquierda y las acciones a la derecha (o arriba en tablet). */
 function ResumenFinal() {
   const banco = useBanco()
   const { respuestas, config } = useConsulta()
+  const [generado] = useState(() => new Date())
+  const [aviso, setAviso] = useState<Aviso>(null)
+  const [ocupado, setOcupado] = useState(false)
   const resumen = generarResumen({ banco, respuestas, config })
-  const [copiado, setCopiado] = useState<'no' | 'si' | 'error'>('no')
+
+  if (!resumen) {
+    return (
+      <Marco>
+        <p>No hay respuestas confirmadas.</p>
+        <TerminarConsulta />
+      </Marco>
+    )
+  }
+
+  async function conPdf(accion: (pdf: Blob, nombre: string) => void) {
+    if (!resumen) return
+    setOcupado(true)
+    try {
+      const { cargarLogo, crearPdfResumen, nombreArchivoPdf } =
+        await import('@/infrastructure/exportacion/resumen-pdf')
+      const pdf = await crearPdfResumen(resumen, { generado, logo: await cargarLogo() })
+      accion(pdf, nombreArchivoPdf(generado))
+    } catch {
+      setAviso({ tipo: 'error', texto: 'No se pudo generar el PDF. Usa "Copiar texto".' })
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  function descargar() {
+    void conPdf((pdf, nombre) => {
+      const url = URL.createObjectURL(pdf)
+      Object.assign(document.createElement('a'), { href: url, download: nombre }).click()
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      setAviso({
+        tipo: 'ok',
+        texto: `Descargado ${nombre}. El archivo quedó en este dispositivo, fuera de MARI: guárdalo según las normas del establecimiento.`,
+      })
+    })
+  }
+
+  function verPdf() {
+    // La pestaña se abre ya, dentro del clic, para que el navegador no la bloquee.
+    const pestana = window.open('', '_blank')
+    void conPdf((pdf) => {
+      const url = URL.createObjectURL(pdf)
+      if (pestana) pestana.location.href = url
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    })
+  }
 
   async function copiar() {
     if (!resumen) return
     try {
-      await navigator.clipboard.writeText(resumenComoTexto(resumen))
-      setCopiado('si')
+      await navigator.clipboard.writeText(resumenComoTexto(resumen, generado))
+      setAviso({
+        tipo: 'ok',
+        texto:
+          'Copiado. El texto quedó en el portapapeles de este dispositivo, fuera de MARI: bórralo cuando ya no lo necesites.',
+      })
     } catch {
-      setCopiado('error')
+      setAviso({ tipo: 'error', texto: 'No se pudo copiar. Usa "Descargar PDF".' })
     }
   }
 
   return (
-    <Marco>
-      <h1 className="text-3xl font-bold">Resumen de la consulta</h1>
-      <Avisos respuestas={respuestas} />
-      {resumen ? (
-        <>
-          <Secciones resumen={resumen} />
-          <Originales resumen={resumen} />
-          <p className="border-t border-black/10 pt-4 font-semibold">{resumen.cierre}</p>
-        </>
-      ) : (
-        <p>No hay respuestas confirmadas.</p>
-      )}
-
-      <div className="flex flex-wrap gap-3">
-        <button type="button" className={botonSecundario} onClick={copiar} disabled={!resumen}>
-          <Copy size={20} aria-hidden /> Copiar resumen
-        </button>
-        <TerminarConsulta />
+    <Marco ancho="max-w-6xl">
+      <div>
+        <h1 className="text-3xl font-bold">Resumen de la consulta</h1>
+        <p className="text-tinta/70 mt-1">Listo para el informe médico.</p>
       </div>
-      {copiado === 'si' && (
-        <p role="status" className="bg-cruz/10 flex items-start gap-2 rounded-2xl p-4 text-sm">
-          <ClipboardCheck size={20} className="text-cruz shrink-0" aria-hidden />
-          Copiado. El texto quedó en el portapapeles de este dispositivo, fuera de MARI: bórralo
-          cuando ya no lo necesites.
-        </p>
-      )}
-      {copiado === 'error' && (
-        <p role="alert" className="text-alerta text-sm">
-          No se pudo copiar. Selecciona el texto y cópialo manualmente.
-        </p>
-      )}
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+        <aside
+          aria-label="Acciones del resumen"
+          className="bg-superficie space-y-3 rounded-2xl p-4 ring-1 ring-black/5 lg:sticky lg:top-6 lg:order-2"
+        >
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            <button type="button" className={botonPrincipal} onClick={descargar} disabled={ocupado}>
+              <Download size={20} aria-hidden /> Descargar PDF
+            </button>
+            <button type="button" className={botonSecundario} onClick={verPdf} disabled={ocupado}>
+              <ExternalLink size={20} aria-hidden /> Ver PDF
+            </button>
+            <button type="button" className={botonSecundario} onClick={copiar}>
+              <Copy size={20} aria-hidden /> Copiar texto
+            </button>
+            <TerminarConsulta />
+          </div>
+          {aviso && (
+            <p
+              role={aviso.tipo === 'ok' ? 'status' : 'alert'}
+              className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
+                aviso.tipo === 'ok' ? 'bg-cruz/10' : 'bg-alerta/10 text-alerta'
+              }`}
+            >
+              {aviso.tipo === 'ok' && (
+                <ClipboardCheck size={18} className="text-cruz shrink-0" aria-hidden />
+              )}
+              {aviso.texto}
+            </p>
+          )}
+        </aside>
+
+        <div className="space-y-4 lg:order-1">
+          <DocumentoResumen resumen={resumen} generado={generado} />
+          <Originales resumen={resumen} />
+        </div>
+      </div>
     </Marco>
   )
 }
@@ -291,7 +362,7 @@ function TerminarConsulta() {
     <div
       role="alertdialog"
       aria-labelledby="terminar-titulo"
-      className="bg-alerta/10 flex flex-wrap items-center gap-3 rounded-2xl p-3"
+      className="bg-alerta/10 col-span-full flex flex-wrap items-center gap-3 rounded-2xl p-3"
     >
       <p id="terminar-titulo" className="font-semibold">
         Se borrarán todas las respuestas. ¿Terminar?
@@ -311,111 +382,5 @@ function TerminarConsulta() {
         Cancelar
       </button>
     </div>
-  )
-}
-
-/* ─────────────────────────────── Contenido del resumen ─────────────────────────────── */
-
-function Avisos({ respuestas }: { respuestas: Respuesta[] }) {
-  const alerta = respondio(respuestas, 'P0', 'SI')
-  const interprete = respondio(respuestas, 'P11', 'SI')
-  if (!alerta && !interprete) return null
-  return (
-    <div className="space-y-2">
-      {alerta && (
-        <p
-          role="alert"
-          className="bg-alerta flex items-center gap-2 rounded-2xl p-4 font-semibold text-white"
-        >
-          <Siren size={22} aria-hidden /> Alerta inicial: refiere dificultad para respirar o dolor
-          fuerte en el pecho.
-        </p>
-      )}
-      {interprete && (
-        <p className="bg-marca/10 flex items-center gap-2 rounded-2xl p-4 font-semibold">
-          <Hand size={22} aria-hidden /> Pidió apoyo de interpretación.
-        </p>
-      )}
-    </div>
-  )
-}
-
-const esFaltante = (linea: string) => /no especificad/i.test(linea)
-
-function Secciones({
-  resumen,
-  resaltarFaltantes = false,
-}: {
-  resumen: Resumen
-  resaltarFaltantes?: boolean
-}) {
-  const secciones: [string, string[]][] = [
-    ['Alerta inicial', [resumen.alerta]],
-    ['Síntomas referidos', resumen.sintomas],
-    ['Antecedentes', resumen.antecedentes],
-    ['Repreguntas', resumen.repreguntas],
-    ['Mensaje libre en LSP', resumen.mensajeLibre],
-  ]
-  return (
-    <div className="space-y-5">
-      {secciones.map(([titulo, lineas]) => (
-        <section key={titulo} aria-labelledby={`seccion-${titulo}`}>
-          <h2
-            id={`seccion-${titulo}`}
-            className="text-marca text-sm font-bold tracking-wide uppercase"
-          >
-            {titulo}
-          </h2>
-          <ul className="mt-2 space-y-1.5">
-            {lineas.map((linea, i) =>
-              resaltarFaltantes && esFaltante(linea) ? (
-                <li key={i} className="flex items-start gap-2 rounded-lg bg-amber-100 px-3 py-1.5">
-                  <TriangleAlert size={18} className="mt-0.5 shrink-0 text-amber-700" aria-hidden />
-                  <span>
-                    <span className="sr-only">Falta un dato: </span>
-                    {linea}
-                  </span>
-                </li>
-              ) : (
-                <li key={i} className="px-3 py-1">
-                  {linea}
-                </li>
-              ),
-            )}
-          </ul>
-        </section>
-      ))}
-    </div>
-  )
-}
-
-/** Respuestas tal como se confirmaron (RES3). */
-function Originales({ resumen }: { resumen: Resumen }) {
-  return (
-    <details className="bg-superficie rounded-2xl p-4 ring-1 ring-black/10">
-      <summary className="cursor-pointer font-semibold">
-        Respuestas originales ({resumen.originales.length})
-      </summary>
-      <table className="mt-3 w-full text-left text-sm">
-        <thead className="text-tinta/60">
-          <tr>
-            <th className="py-1 pr-3 font-medium">Hora</th>
-            <th className="py-1 pr-3 font-medium">Pregunta</th>
-            <th className="py-1 pr-3 font-medium">Respuesta</th>
-            <th className="py-1 font-medium">Cómo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {resumen.originales.map((o, i) => (
-            <tr key={i} className="border-t border-black/5">
-              <td className="py-1.5 pr-3 tabular-nums">{horaCorta(o.hora)}</td>
-              <td className="py-1.5 pr-3">{o.pregunta}</td>
-              <td className="py-1.5 pr-3 font-medium">{o.respuesta}</td>
-              <td className="py-1.5">{o.origen}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </details>
   )
 }
