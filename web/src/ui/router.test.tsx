@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Inicio } from '@/ui/pages/Inicio'
 import { crearRutas } from '@/ui/router'
+
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 describe('Inicio', () => {
   it('muestra el logo y las dos entradas', () => {
@@ -10,10 +15,24 @@ describe('Inicio', () => {
     render(<RouterProvider router={router} />)
     expect(screen.getByAltText(/MARI/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /empezar/i })).toHaveAttribute('href', '/paciente')
-    expect(screen.getByRole('link', { name: /profesional/i })).toHaveAttribute(
-      'href',
-      '/profesional',
-    )
+    expect(screen.getByRole('button', { name: /profesional/i })).toBeInTheDocument()
+  })
+
+  it('a la vista profesional se entra manteniendo pulsado (PRO3)', () => {
+    vi.useFakeTimers()
+    const router = createMemoryRouter([
+      { path: '/', element: <Inicio /> },
+      { path: '/profesional', element: <p>Vista profesional</p> },
+    ])
+    render(<RouterProvider router={router} />)
+    const boton = screen.getByRole('button', { name: /profesional/i })
+
+    fireEvent.click(boton) // un toque normal no basta
+    expect(router.state.location.pathname).toBe('/')
+
+    fireEvent.pointerDown(boton)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(router.state.location.pathname).toBe('/profesional')
   })
 })
 
