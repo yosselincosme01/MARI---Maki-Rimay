@@ -7,6 +7,7 @@
 import { createContext, useContext } from 'react'
 import { useStore } from 'zustand'
 import type { Consulta, StoreConsulta } from '@/application/consulta/crear-consulta'
+import type { Buscador } from '@/application/puertos/buscador'
 import type { Reconocedor } from '@/application/puertos/reconocedor'
 import type { Banco } from '@/domain/banco/tipos'
 
@@ -25,6 +26,8 @@ export type RecursosConsulta =
       modoDemo: boolean
       reconocedor?: Reconocedor
       reconocimiento?: ModoReconocimiento
+      /** Búsqueda de repreguntas (BUS). Sin buscador, la vista profesional no ofrece repreguntar. */
+      buscador?: Buscador
     }
   /** El banco no es válido: la interfaz muestra los errores y no inicia la consulta (BAN1). */
   | { ok: false; errores: string[]; modoDemo: boolean }
@@ -62,4 +65,9 @@ export function useReconocimiento(): { reconocedor: Reconocedor | null; modo: Mo
   return recursos.reconocedor
     ? { reconocedor: recursos.reconocedor, modo: recursos.reconocimiento ?? 'simulado' }
     : { reconocedor: null, modo: 'simulado' }
+}
+
+/** El buscador de repreguntas, si la app tiene uno. */
+export function useBuscador(): Buscador | null {
+  return useRecursosValidos().buscador ?? null
 }

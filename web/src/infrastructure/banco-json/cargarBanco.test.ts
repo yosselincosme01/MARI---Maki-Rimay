@@ -18,8 +18,17 @@ describe('banco-preguntas.json', () => {
     expect(cargarBanco()).toMatchObject({ ok: true })
   })
 
-  it('solo incluye las preguntas que ya tienen video', () => {
-    expect(banco().preguntas.map((p) => p.id)).toEqual(['P1', 'P2', 'P3', 'P4', 'P7', 'P9'])
+  it('el flujo solo incluye las preguntas que ya tienen video', () => {
+    const flujo = banco().preguntas.filter((p) => p.grupo === 'flujo')
+    expect(flujo.map((p) => p.id)).toEqual(['P1', 'P2', 'P3', 'P4', 'P7', 'P9'])
+  })
+
+  it('las repreguntas reutilizan los videos validados del flujo', () => {
+    const preguntas = banco().preguntas
+    const videosFlujo = new Set(preguntas.filter((p) => p.grupo === 'flujo').map((p) => p.video))
+    const repreguntas = preguntas.filter((p) => p.grupo === 'repregunta')
+    expect(repreguntas.length).toBeGreaterThanOrEqual(5) // el plan pide de 5 a 10 (BAN3)
+    expect(repreguntas.every((r) => videosFlujo.has(r.video) && r.alias?.length)).toBe(true)
   })
 
   it('cada video y pictograma existe en public/', () => {

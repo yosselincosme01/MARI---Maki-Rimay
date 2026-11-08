@@ -25,8 +25,9 @@ import { Boton } from '@/ui/components/base/Boton'
 import { estilosBoton, tarjeta } from '@/ui/components/base/estilos'
 import { PanelAviso } from '@/ui/components/base/PanelAviso'
 import { Logo } from '@/ui/components/Logo'
-import { useBanco, useConsulta, useRecursos } from '@/ui/consulta/contexto'
+import { useBanco, useBuscador, useConsulta, useRecursos } from '@/ui/consulta/contexto'
 import { DocumentoResumen, Originales } from '@/ui/profesional/DocumentoResumen'
+import { Repreguntar } from '@/ui/profesional/Repreguntar'
 
 export function Profesional() {
   const recursos = useRecursos()
@@ -222,8 +223,11 @@ function RecibirTablet() {
 /** Revisión de respuestas confirmadas, con los faltantes resaltados (PRO1, PRO2). */
 function Revision() {
   const banco = useBanco()
+  const buscador = useBuscador()
+  const navegar = useNavigate()
   const { respuestas, config, verResumen } = useConsulta()
   const [generado] = useState(() => new Date())
+  const [repreguntando, setRepreguntando] = useState(false)
   const resumen = generarResumen({ banco, respuestas, config })
 
   return (
@@ -240,20 +244,28 @@ function Revision() {
         </p>
       )}
 
-      <Acciones>
-        <Boton tamano="lg" onClick={verResumen} disabled={!resumen}>
-          <FileText size={20} aria-hidden /> Ver resumen
-        </Boton>
-        <div className="flex flex-col">
-          <Boton variante="secundario" tamano="lg" disabled aria-describedby="repreguntar-pronto">
+      {repreguntando && buscador ? (
+        <Repreguntar
+          buscador={buscador}
+          alCancelar={() => setRepreguntando(false)}
+          alEnviar={() => void navegar('/paciente')}
+        />
+      ) : (
+        <Acciones>
+          <Boton tamano="lg" onClick={verResumen} disabled={!resumen}>
+            <FileText size={20} aria-hidden /> Ver resumen
+          </Boton>
+          <Boton
+            variante="secundario"
+            tamano="lg"
+            disabled={!buscador}
+            onClick={() => setRepreguntando(true)}
+          >
             <MessageCircleQuestion size={20} aria-hidden /> Repreguntar
           </Boton>
-          <span id="repreguntar-pronto" className="text-tinta-suave mt-1 text-xs">
-            Disponible pronto (búsqueda de repreguntas)
-          </span>
-        </div>
-        <TerminarConsulta />
-      </Acciones>
+          <TerminarConsulta />
+        </Acciones>
+      )}
     </Marco>
   )
 }

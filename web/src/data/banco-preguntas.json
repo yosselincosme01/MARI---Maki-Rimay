@@ -10,9 +10,21 @@
       "tipo": "sena",
       "multiple": false,
       "opciones": [
-        { "valor": "DOLOR", "etiqueta": "Dolor", "pictograma": "pictogramas/dolor.png" },
-        { "valor": "TOS", "etiqueta": "Tos", "pictograma": "pictogramas/tos.png" },
-        { "valor": "FIEBRE", "etiqueta": "Fiebre", "pictograma": "pictogramas/fiebre.png" },
+        {
+          "valor": "DOLOR",
+          "etiqueta": "Dolor",
+          "pictograma": "pictogramas/dolor.png"
+        },
+        {
+          "valor": "TOS",
+          "etiqueta": "Tos",
+          "pictograma": "pictogramas/tos.png"
+        },
+        {
+          "valor": "FIEBRE",
+          "etiqueta": "Fiebre",
+          "pictograma": "pictogramas/fiebre.png"
+        },
         {
           "valor": "FALTA_DE_AIRE",
           "etiqueta": "Falta de aire",
@@ -21,7 +33,17 @@
       ],
       "permiteOtra": true,
       "iniciaCiclo": true,
-      "siguiente": [{ "si": { "valor": "DOLOR" }, "ir": "P2" }, { "ir": "P3" }]
+      "siguiente": [
+        {
+          "si": {
+            "valor": "DOLOR"
+          },
+          "ir": "P2"
+        },
+        {
+          "ir": "P3"
+        }
+      ]
     },
     {
       "id": "P2",
@@ -31,18 +53,49 @@
       "validado": true,
       "tipo": "cuerpo",
       "opciones": [
-        { "valor": "CABEZA", "etiqueta": "Cabeza" },
-        { "valor": "GARGANTA", "etiqueta": "Garganta" },
-        { "valor": "PECHO", "etiqueta": "Pecho" },
-        { "valor": "ABDOMEN_SUPERIOR", "etiqueta": "Abdomen superior" },
-        { "valor": "ABDOMEN_INFERIOR", "etiqueta": "Abdomen inferior" },
-        { "valor": "ESPALDA", "etiqueta": "Espalda" },
-        { "valor": "BRAZOS", "etiqueta": "Brazos" },
-        { "valor": "PIERNAS", "etiqueta": "Piernas" },
-        { "valor": "OTRA_ZONA", "etiqueta": "Otra zona" }
+        {
+          "valor": "CABEZA",
+          "etiqueta": "Cabeza"
+        },
+        {
+          "valor": "GARGANTA",
+          "etiqueta": "Garganta"
+        },
+        {
+          "valor": "PECHO",
+          "etiqueta": "Pecho"
+        },
+        {
+          "valor": "ABDOMEN_SUPERIOR",
+          "etiqueta": "Abdomen superior"
+        },
+        {
+          "valor": "ABDOMEN_INFERIOR",
+          "etiqueta": "Abdomen inferior"
+        },
+        {
+          "valor": "ESPALDA",
+          "etiqueta": "Espalda"
+        },
+        {
+          "valor": "BRAZOS",
+          "etiqueta": "Brazos"
+        },
+        {
+          "valor": "PIERNAS",
+          "etiqueta": "Piernas"
+        },
+        {
+          "valor": "OTRA_ZONA",
+          "etiqueta": "Otra zona"
+        }
       ],
       "porCiclo": true,
-      "siguiente": [{ "ir": "P3" }]
+      "siguiente": [
+        {
+          "ir": "P3"
+        }
+      ]
     },
     {
       "id": "P3",
@@ -52,13 +105,29 @@
       "validado": true,
       "tipo": "opciones",
       "opciones": [
-        { "valor": "HOY", "etiqueta": "Hoy" },
-        { "valor": "AYER", "etiqueta": "Ayer" },
-        { "valor": "VARIOS_DIAS", "etiqueta": "Varios días" },
-        { "valor": "UNA_SEMANA_O_MAS", "etiqueta": "Una semana o más" }
+        {
+          "valor": "HOY",
+          "etiqueta": "Hoy"
+        },
+        {
+          "valor": "AYER",
+          "etiqueta": "Ayer"
+        },
+        {
+          "valor": "VARIOS_DIAS",
+          "etiqueta": "Varios días"
+        },
+        {
+          "valor": "UNA_SEMANA_O_MAS",
+          "etiqueta": "Una semana o más"
+        }
       ],
       "porCiclo": true,
-      "siguiente": [{ "ir": "P4" }]
+      "siguiente": [
+        {
+          "ir": "P4"
+        }
+      ]
     },
     {
       "id": "P4",
@@ -68,12 +137,25 @@
       "validado": true,
       "tipo": "escala",
       "opciones": [
-        { "valor": "LEVE", "etiqueta": "Leve" },
-        { "valor": "MODERADO", "etiqueta": "Moderado" },
-        { "valor": "FUERTE", "etiqueta": "Fuerte" }
+        {
+          "valor": "LEVE",
+          "etiqueta": "Leve"
+        },
+        {
+          "valor": "MODERADO",
+          "etiqueta": "Moderado"
+        },
+        {
+          "valor": "FUERTE",
+          "etiqueta": "Fuerte"
+        }
       ],
       "porCiclo": true,
-      "siguiente": [{ "ir": "P7" }]
+      "siguiente": [
+        {
+          "ir": "P7"
+        }
+      ]
     },
     {
       "id": "P7",
@@ -83,10 +165,22 @@
       "validado": true,
       "tipo": "sena",
       "opciones": [
-        { "valor": "SI", "etiqueta": "Sí", "pictograma": "pictogramas/si.png" },
-        { "valor": "NO", "etiqueta": "No", "pictograma": "pictogramas/no.png" }
+        {
+          "valor": "SI",
+          "etiqueta": "Sí",
+          "pictograma": "pictogramas/si.png"
+        },
+        {
+          "valor": "NO",
+          "etiqueta": "No",
+          "pictograma": "pictogramas/no.png"
+        }
       ],
-      "siguiente": [{ "ir": "P9" }]
+      "siguiente": [
+        {
+          "ir": "P9"
+        }
+      ]
     },
     {
       "id": "P9",
@@ -96,12 +190,238 @@
       "validado": true,
       "tipo": "opciones",
       "opciones": [
-        { "valor": "SI", "etiqueta": "Sí", "pictograma": "pictogramas/si.png" },
-        { "valor": "NO", "etiqueta": "No", "pictograma": "pictogramas/no.png" },
-        { "valor": "NO_SE", "etiqueta": "No sé" }
+        {
+          "valor": "SI",
+          "etiqueta": "Sí",
+          "pictograma": "pictogramas/si.png"
+        },
+        {
+          "valor": "NO",
+          "etiqueta": "No",
+          "pictograma": "pictogramas/no.png"
+        },
+        {
+          "valor": "NO_SE",
+          "etiqueta": "No sé"
+        }
       ],
-      "mostrarSi": { "config": "preguntarEmbarazo" },
-      "siguiente": [{ "ir": "FIN" }]
+      "mostrarSi": {
+        "config": "preguntarEmbarazo"
+      },
+      "siguiente": [
+        {
+          "ir": "FIN"
+        }
+      ]
+    },
+    {
+      "id": "R-SINTOMA",
+      "grupo": "repregunta",
+      "texto": "¿Qué sientes?",
+      "video": "videos/preguntas/01-que-sientes.mp4",
+      "validado": true,
+      "tipo": "sena",
+      "opciones": [
+        {
+          "valor": "DOLOR",
+          "etiqueta": "Dolor",
+          "pictograma": "pictogramas/dolor.png"
+        },
+        {
+          "valor": "TOS",
+          "etiqueta": "Tos",
+          "pictograma": "pictogramas/tos.png"
+        },
+        {
+          "valor": "FIEBRE",
+          "etiqueta": "Fiebre",
+          "pictograma": "pictogramas/fiebre.png"
+        },
+        {
+          "valor": "FALTA_DE_AIRE",
+          "etiqueta": "Falta de aire",
+          "pictograma": "pictogramas/falta-de-aire.png"
+        }
+      ],
+      "permiteOtra": true,
+      "alias": [
+        "qué siente",
+        "qué tiene",
+        "qué le pasa",
+        "cómo se siente",
+        "síntoma",
+        "molestia",
+        "otro síntoma",
+        "malestar"
+      ]
+    },
+    {
+      "id": "R-ZONA",
+      "grupo": "repregunta",
+      "texto": "¿Dónde te duele?",
+      "video": "videos/preguntas/02-donde-te-duele.mp4",
+      "validado": true,
+      "tipo": "cuerpo",
+      "opciones": [
+        {
+          "valor": "CABEZA",
+          "etiqueta": "Cabeza"
+        },
+        {
+          "valor": "GARGANTA",
+          "etiqueta": "Garganta"
+        },
+        {
+          "valor": "PECHO",
+          "etiqueta": "Pecho"
+        },
+        {
+          "valor": "ABDOMEN_SUPERIOR",
+          "etiqueta": "Abdomen superior"
+        },
+        {
+          "valor": "ABDOMEN_INFERIOR",
+          "etiqueta": "Abdomen inferior"
+        },
+        {
+          "valor": "ESPALDA",
+          "etiqueta": "Espalda"
+        },
+        {
+          "valor": "BRAZOS",
+          "etiqueta": "Brazos"
+        },
+        {
+          "valor": "PIERNAS",
+          "etiqueta": "Piernas"
+        },
+        {
+          "valor": "OTRA_ZONA",
+          "etiqueta": "Otra zona"
+        }
+      ],
+      "alias": [
+        "dónde le duele",
+        "dónde duele",
+        "en qué parte",
+        "zona",
+        "ubicación",
+        "localización",
+        "parte del cuerpo"
+      ]
+    },
+    {
+      "id": "R-DESDE-CUANDO",
+      "grupo": "repregunta",
+      "texto": "¿Desde cuándo?",
+      "video": "videos/preguntas/03-desde-cuando.mp4",
+      "validado": true,
+      "tipo": "opciones",
+      "opciones": [
+        {
+          "valor": "HOY",
+          "etiqueta": "Hoy"
+        },
+        {
+          "valor": "AYER",
+          "etiqueta": "Ayer"
+        },
+        {
+          "valor": "VARIOS_DIAS",
+          "etiqueta": "Varios días"
+        },
+        {
+          "valor": "UNA_SEMANA_O_MAS",
+          "etiqueta": "Una semana o más"
+        }
+      ],
+      "alias": [
+        "desde cuándo",
+        "hace cuánto",
+        "cuánto tiempo",
+        "cuándo empezó",
+        "cuándo comenzó",
+        "inicio",
+        "duración",
+        "días"
+      ]
+    },
+    {
+      "id": "R-INTENSIDAD",
+      "grupo": "repregunta",
+      "texto": "¿Qué tan fuerte es?",
+      "video": "videos/preguntas/04-que-tan-fuerte-es.mp4",
+      "validado": true,
+      "tipo": "escala",
+      "opciones": [
+        {
+          "valor": "LEVE",
+          "etiqueta": "Leve"
+        },
+        {
+          "valor": "MODERADO",
+          "etiqueta": "Moderado"
+        },
+        {
+          "valor": "FUERTE",
+          "etiqueta": "Fuerte"
+        }
+      ],
+      "alias": [
+        "qué tan fuerte",
+        "cuánto duele",
+        "duele mucho",
+        "intensidad",
+        "severidad",
+        "escala de dolor",
+        "qué tan intenso"
+      ]
+    },
+    {
+      "id": "R-ALERGIAS",
+      "grupo": "repregunta",
+      "texto": "¿Tienes alergias?",
+      "video": "videos/preguntas/05-alergias.mp4",
+      "validado": true,
+      "tipo": "sena",
+      "opciones": [
+        {
+          "valor": "SI",
+          "etiqueta": "Sí",
+          "pictograma": "pictogramas/si.png"
+        },
+        {
+          "valor": "NO",
+          "etiqueta": "No",
+          "pictograma": "pictogramas/no.png"
+        }
+      ],
+      "alias": ["alergia", "alérgico", "alérgica", "reacción alérgica", "alergia a medicamentos"]
+    },
+    {
+      "id": "R-EMBARAZO",
+      "grupo": "repregunta",
+      "texto": "¿Estás embarazada?",
+      "video": "videos/preguntas/06-embarazo.mp4",
+      "validado": true,
+      "tipo": "opciones",
+      "opciones": [
+        {
+          "valor": "SI",
+          "etiqueta": "Sí",
+          "pictograma": "pictogramas/si.png"
+        },
+        {
+          "valor": "NO",
+          "etiqueta": "No",
+          "pictograma": "pictogramas/no.png"
+        },
+        {
+          "valor": "NO_SE",
+          "etiqueta": "No sé"
+        }
+      ],
+      "alias": ["embarazo", "embarazada", "gestación", "gestante", "podría estar embarazada"]
     }
   ]
 }
