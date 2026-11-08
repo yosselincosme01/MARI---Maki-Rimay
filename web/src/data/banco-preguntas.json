@@ -6,7 +6,7 @@
       "grupo": "flujo",
       "texto": "¿Qué sientes?",
       "video": "videos/preguntas/01-que-sientes.mp4",
-      "validado": false,
+      "validado": true,
       "tipo": "sena",
       "multiple": false,
       "opciones": [
@@ -28,7 +28,7 @@
       "grupo": "flujo",
       "texto": "¿Dónde te duele?",
       "video": "videos/preguntas/02-donde-te-duele.mp4",
-      "validado": false,
+      "validado": true,
       "tipo": "cuerpo",
       "opciones": [
         { "valor": "CABEZA", "etiqueta": "Cabeza" },
@@ -49,7 +49,7 @@
       "grupo": "flujo",
       "texto": "¿Desde cuándo?",
       "video": "videos/preguntas/03-desde-cuando.mp4",
-      "validado": false,
+      "validado": true,
       "tipo": "opciones",
       "opciones": [
         { "valor": "HOY", "etiqueta": "Hoy" },
@@ -65,7 +65,7 @@
       "grupo": "flujo",
       "texto": "¿Qué tan fuerte es?",
       "video": "videos/preguntas/04-que-tan-fuerte-es.mp4",
-      "validado": false,
+      "validado": true,
       "tipo": "escala",
       "opciones": [
         { "valor": "LEVE", "etiqueta": "Leve" },
@@ -80,7 +80,7 @@
       "grupo": "flujo",
       "texto": "¿Tienes alergias?",
       "video": "videos/preguntas/05-alergias.mp4",
-      "validado": false,
+      "validado": true,
       "tipo": "sena",
       "opciones": [
         { "valor": "SI", "etiqueta": "Sí", "pictograma": "pictogramas/si.png" },
@@ -93,7 +93,7 @@
       "grupo": "flujo",
       "texto": "¿Estás embarazada?",
       "video": "videos/preguntas/06-embarazo.mp4",
-      "validado": false,
+      "validado": true,
       "tipo": "opciones",
       "opciones": [
         { "valor": "SI", "etiqueta": "Sí", "pictograma": "pictogramas/si.png" },

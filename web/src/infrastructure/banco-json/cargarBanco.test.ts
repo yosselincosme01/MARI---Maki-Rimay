@@ -31,7 +31,7 @@ describe('banco-preguntas.json', () => {
     expect(faltantes).toEqual([])
   })
 
-  it('ningún video está marcado como validado todavía', () => {
-    expect(banco().preguntas.every((p) => !p.validado)).toBe(true)
+  it('los 6 videos están validados (grabados por una persona competente en LSP)', () => {
+    expect(banco().preguntas.every((p) => p.validado)).toBe(true)
   })
 })
