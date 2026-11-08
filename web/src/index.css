@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/plus-jakarta-sans';
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem; /* compensa el encabezado fijo */
+}
+
+/*
+ * Tokens de marca, tomados del logo de MARI.
+ * Tailwind v4 convierte cada --color-* en clases: bg-marca, text-tinta, etc.
+ */
+@theme {
+  --color-tinta: #15453f; /* texto principal, letras "M" y "RI" */
+  --color-marca: #07817e; /* verde azulado de la "A" */
+  --color-marca-oscuro: #097268; /* borde del monitor */
+  --color-cruz: #39a97e; /* cruz de salud: acciones de confirmación */
+  --color-marca-claro: #63b8a6;
+  --color-fondo: #f1f9f7;
+  --color-superficie: #ffffff;
+  --color-alerta: #b42318; /* alerta inicial P0 */
+
+  /* Fuentes servidas desde el propio proyecto: funcionan sin internet. */
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', system-ui, sans-serif;
+  --radius-boton: 1.25rem;
+}
+
+@layer base {
+  html {
+    /* Base de 18px: la app debe poder usarse con poca lectura y en tablets. */
+    font-size: 112.5%;
+  }
+  body {
+    @apply bg-fondo text-tinta font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    letter-spacing: -0.02em;
+    word-spacing: 0.08em; /* Plus Jakarta junta mucho las palabras en tamaños grandes */
+    text-wrap: balance;
+  }
+  /* Foco siempre visible para navegación con teclado. */
+  :focus-visible {
+    @apply outline-marca outline-4 outline-offset-2;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
