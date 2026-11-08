@@ -2,6 +2,12 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Privacidad: la app solo puede conectarse a su propio origen. El navegador bloquea
+      cualquier envío a otros servidores (por ejemplo, el registro de uso que MediaPipe
+      manda a Google y que no se puede desactivar). Nada sale del dispositivo.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self'" />
     <link rel="icon" type="image/png" href="/brand/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#07817e" />
