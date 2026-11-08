@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import datosBanco from '@/data/banco-preguntas.json'
 import type { Banco, Pregunta, Respuesta } from '@/domain/banco/tipos'
 import { validarBanco } from '@/domain/banco/validar'
-import { CIERRE, generarResumen, resumenComoTexto } from './resumen'
+import { CIERRE, generarResumen, mostrarDato, resumenComoTexto } from './resumen'
 
 /* ─────────────── Banco de prueba con todas las preguntas del plan ─────────────── */
 
@@ -82,12 +82,16 @@ const resumir = (respuestas: Respuesta[], config = sinEmbarazo) =>
 
 /* ───────────────────────────────────── Tests ───────────────────────────────────── */
 
+/** Los datos de un síntoma como texto: "Tiempo: desde ayer". */
+const datosDe = (resumen: ReturnType<typeof resumir>, i = 0) =>
+  resumen!.sintomas[i]!.datos.map((d) => `${d.etiqueta}: ${mostrarDato(d)}`)
+
 describe('generarResumen', () => {
   it('sin respuestas confirmadas no genera resumen (RES4)', () => {
     expect(resumir([])).toBeNull()
   })
 
-  it('una línea por síntoma con la plantilla completa (RES2)', () => {
+  it('una línea por síntoma con la plantilla y sus datos por separado (RES2)', () => {
     const resumen = resumir([
       r('P0', 'NO'),
       r('P1', 'DOLOR', { ciclo: 1 }),
@@ -95,9 +99,15 @@ describe('generarResumen', () => {
       r('P3', 'AYER', { ciclo: 1, sintoma: 'DOLOR' }),
       r('P4', 'FUERTE', { ciclo: 1, sintoma: 'DOLOR' }),
       r('P5', 'EMPEORADO', { ciclo: 1, sintoma: 'DOLOR' }),
-    ])!
-    expect(resumen.sintomas).toEqual([
+    ])
+    expect(resumen!.sintomas[0]!.linea).toBe(
       'Dolor en abdomen inferior desde ayer, intensidad fuerte, ha empeorado.',
+    )
+    expect(datosDe(resumen)).toEqual([
+      'Localización: abdomen inferior',
+      'Tiempo: desde ayer',
+      'Intensidad: fuerte',
+      'Evolución: ha empeorado',
     ])
   })
 
@@ -109,23 +119,30 @@ describe('generarResumen', () => {
       r('P3', 'HOY', { ciclo: 2, sintoma: 'FIEBRE' }),
       r('P4', 'MODERADO', { ciclo: 2, sintoma: 'FIEBRE' }),
     ])!
-    expect(resumen.sintomas).toEqual([
+    expect(resumen.sintomas.map((s) => s.linea)).toEqual([
       'Tos desde hace varios días, intensidad no especificada, evolución no especificada.',
       'Fiebre desde hoy, intensidad moderada, evolución no especificada.',
     ])
   })
 
-  it('lo que falta se marca, nunca se completa ni se infiere', () => {
+  it('lo que falta queda como null ("no especificado"), nunca se completa', () => {
     const resumen = resumir([r('P1', 'FIEBRE', { ciclo: 1 })])!
-    expect(resumen.sintomas).toEqual([
-      'Fiebre, inicio no especificado, intensidad no especificada, evolución no especificada.',
+    expect(resumen.sintomas[0]!.datos.every((d) => d.valor === null)).toBe(true)
+    expect(resumen.alerta).toEqual({ estado: 'no-especificado', texto: 'No especificado.' })
+    expect(resumen.antecedentes.map(mostrarDato)).toEqual([
+      'no especificado',
+      'no especificado',
+      'no especificado',
     ])
-    expect(resumen.alerta).toBe('No especificado.')
-    expect(resumen.antecedentes).toEqual([
-      'Alergias: no especificado.',
-      'Medicamentos: no especificado.',
-      'Enfermedades de larga duración: no especificado.',
-    ])
+  })
+
+  it('la localización solo aparece si se preguntó (dolor) o se respondió', () => {
+    expect(datosDe(resumir([r('P1', 'TOS', { ciclo: 1 })]))).not.toContainEqual(
+      expect.stringMatching(/Localización/),
+    )
+    expect(datosDe(resumir([r('P1', 'DOLOR', { ciclo: 1 })]))[0]).toBe(
+      'Localización: no especificado',
+    )
   })
 
   it('si la persona cambió una respuesta, usa la última confirmada', () => {
@@ -134,16 +151,17 @@ describe('generarResumen', () => {
       r('P3', 'HOY', { ciclo: 1, sintoma: 'TOS' }),
       r('P3', 'AYER', { ciclo: 1, sintoma: 'TOS' }),
     ])!
-    expect(resumen.sintomas[0]).toContain('desde ayer')
+    expect(resumen.sintomas[0]!.linea).toContain('desde ayer')
   })
 
   it('P0 = SÍ se informa como alerta inicial', () => {
     const resumen = resumir([r('P0', 'SI')])!
-    expect(resumen.alerta).toMatch(/^Refiere dificultad para respirar/)
-    expect(resumen.sintomas).toEqual(['No especificado.'])
+    expect(resumen.alerta.estado).toBe('si')
+    expect(resumen.alerta.texto).toMatch(/^Refiere dificultad para respirar/)
+    expect(resumen.sintomas).toEqual([])
   })
 
-  it('antecedentes, con P9 solo si el profesional la activó', () => {
+  it('antecedentes con nombre y valor, P9 solo si el profesional la activó', () => {
     const respuestas = [
       r('P7', 'NO'),
       r('P8', 'SI'),
@@ -151,25 +169,45 @@ describe('generarResumen', () => {
       r('P10', ['ASMA', 'DIABETES']),
     ]
     expect(resumir(respuestas)!.antecedentes).toEqual([
-      'Alergias: no.',
-      'Medicamentos: sí.',
-      'Enfermedades de larga duración: asma, diabetes.',
+      { etiqueta: 'Alergias', valor: 'no' },
+      { etiqueta: 'Medicación habitual', valor: 'sí' },
+      { etiqueta: 'Enfermedades de larga duración', valor: 'asma, diabetes' },
     ])
-    expect(resumir(respuestas, { preguntarEmbarazo: true })!.antecedentes).toContain(
-      'Embarazo: no sabe.',
-    )
+    expect(resumir(respuestas, { preguntarEmbarazo: true })!.antecedentes).toContainEqual({
+      etiqueta: 'Embarazo',
+      valor: 'no sabe',
+    })
   })
 
-  it('las repreguntas van en su sección, con el síntoma asociado', () => {
+  it('una repregunta aparece dentro del síntoma al que se refiere', () => {
     const resumen = resumir([
       r('P1', 'TOS', { ciclo: 1 }),
       r('R-FLEMA', 'SI', { repregunta: { sintoma: 'TOS' } }),
     ])!
-    expect(resumen.repreguntas).toEqual(['¿La tos es con flema? (sobre tos): sí.'])
-    expect(resumir([r('P7', 'NO')])!.repreguntas).toEqual(['Sin repreguntas.'])
+    expect(resumen.sintomas[0]!.detalles).toEqual(['¿La tos es con flema? Sí.'])
+    expect(resumen.otrosDatos).toEqual([])
   })
 
-  it('mensaje libre: señas confirmadas y aviso para el intérprete', () => {
+  it('una repregunta sin síntoma, o de un síntoma no referido, va a "otros datos"', () => {
+    const resumen = resumir([
+      r('P1', 'FIEBRE', { ciclo: 1 }),
+      r('R-FLEMA', 'NO', { repregunta: {} }),
+      r('R-FLEMA', 'SI', { repregunta: { sintoma: 'TOS' } }),
+    ])!
+    expect(resumen.sintomas[0]!.detalles).toEqual([])
+    expect(resumen.otrosDatos).toEqual(['¿La tos es con flema? No.', '¿La tos es con flema? Sí.'])
+  })
+
+  it('una repregunta no altera los datos del flujo', () => {
+    const resumen = resumir([
+      r('P1', 'FIEBRE', { ciclo: 1 }),
+      r('P3', 'HOY', { repregunta: { sintoma: 'FIEBRE' } }),
+    ])!
+    expect(resumen.sintomas[0]!.linea).toContain('inicio no especificado')
+    expect(resumen.sintomas[0]!.detalles).toEqual(['¿Desde cuándo? Hoy.'])
+  })
+
+  it('mensaje libre: señas confirmadas y aviso para el intérprete; vacío si no hubo', () => {
     const resumen = resumir([
       r('P3', 'OTRA', { ciclo: 1, sintoma: 'DOLOR' }),
       r('P3', ['DOLOR', 'TOS'], { origen: 'mensaje-libre' }),
@@ -179,9 +217,9 @@ describe('generarResumen', () => {
       'Señas confirmadas: dolor, tos.',
       'Eligió "otra / no está aquí" en: ¿Desde cuándo?.',
       'El resto del mensaje requiere revisión por un intérprete.',
-      'Pidió apoyo de interpretación.',
     ])
-    expect(resumir([r('P7', 'NO')])!.mensajeLibre).toEqual(['Sin mensaje libre.'])
+    expect(resumen.pidioInterprete).toBe(true)
+    expect(resumir([r('P7', 'NO')])!.mensajeLibre).toEqual([])
   })
 
   it('"otra" en un síntoma no se convierte en un dato inventado', () => {
@@ -189,7 +227,9 @@ describe('generarResumen', () => {
       r('P1', 'DOLOR', { ciclo: 1 }),
       r('P4', 'OTRA', { ciclo: 1, sintoma: 'DOLOR' }),
     ])!
-    expect(resumen.sintomas[0]).toContain('intensidad que no está en la lista (ver mensaje libre)')
+    expect(resumen.sintomas[0]!.linea).toContain(
+      'intensidad no está en la lista (ver mensaje libre)',
+    )
   })
 
   it('muestra también las respuestas originales, en orden (RES3)', () => {
@@ -206,28 +246,42 @@ describe('generarResumen', () => {
     expect(resumen.cierre).toBe(CIERRE)
   })
 
-  it('un valor desconocido muestra el código, sin inventar un texto', () => {
-    const resumen = resumir([r('P7', 'TALVEZ')])!
-    expect(resumen.antecedentes[0]).toBe('Alergias: TALVEZ.')
+  it('un valor desconocido muestra el código tal cual, sin inventar un texto', () => {
+    expect(resumir([r('P7', 'TALVEZ')])!.antecedentes[0]!.valor).toBe('TALVEZ')
     const zona = resumir([r('P1', 'DOLOR', { ciclo: 1 }), r('P2', 'RODILLA', { ciclo: 1 })])!
-    expect(zona.sintomas[0]).toMatch(/^Dolor en RODILLA,/)
+    expect(zona.sintomas[0]!.linea).toMatch(/^Dolor en RODILLA,/)
   })
 })
 
 describe('resumenComoTexto', () => {
-  it('tiene las 5 secciones en orden y el cierre fijo al final (RES1, RES3)', () => {
-    const texto = resumenComoTexto(resumir([r('P0', 'NO'), r('P1', 'TOS', { ciclo: 1 })])!)
-    const secciones = [
-      'ALERTA INICIAL',
+  const generado = new Date(2026, 10, 8, 15, 8)
+
+  it('encabezado, secciones en orden y cierre fijo al final; sin sección "Repreguntas"', () => {
+    const texto = resumenComoTexto(
+      resumir([
+        r('P0', 'NO'),
+        r('P1', 'TOS', { ciclo: 1 }),
+        r('R-FLEMA', 'SI', { repregunta: { sintoma: 'TOS' } }),
+      ])!,
+      generado,
+    )
+    expect(texto).toMatch(/^RESUMEN PRE-CONSULTA · MARI\nGenerado: 08\/11\/2026 15:08/)
+    const orden = [
+      'Alerta inicial:',
       'SÍNTOMAS REFERIDOS',
       'ANTECEDENTES',
-      'REPREGUNTAS',
-      'MENSAJE LIBRE EN LSP',
       'RESPUESTAS ORIGINALES',
     ].map((s) => texto.indexOf(s))
-    expect(secciones.every((i) => i >= 0)).toBe(true)
-    expect([...secciones].sort((x, y) => x - y)).toEqual(secciones)
+    expect(orden.every((i) => i >= 0)).toBe(true)
+    expect([...orden].sort((x, y) => x - y)).toEqual(orden)
+    expect(texto).toContain('    - ¿La tos es con flema? Sí.')
+    expect(texto).not.toMatch(/REPREGUNTAS/)
     expect(texto.trimEnd().endsWith(CIERRE)).toBe(true)
+  })
+
+  it('las secciones vacías no aparecen', () => {
+    const texto = resumenComoTexto(resumir([r('P7', 'NO')])!, generado)
+    expect(texto).not.toMatch(/MENSAJE LIBRE|OTROS DATOS|interpretación/)
   })
 })
 
@@ -245,8 +299,8 @@ describe('con el banco real', () => {
         r('P4', 'LEVE', { ciclo: 1, sintoma: 'DOLOR' }),
       ],
     })!
-    expect(resumen.sintomas).toEqual([
+    expect(resumen.sintomas[0]!.linea).toBe(
       'Dolor en abdomen inferior desde hace una semana o más, intensidad leve, evolución no especificada.',
-    ])
+    )
   })
 })
