@@ -75,8 +75,10 @@ async function empezar(
   preguntarEmbarazo = false,
 ) {
   act(() => recursos.consulta.getState().iniciarConsulta({ preguntarEmbarazo }))
-  expect(screen.getByRole('heading', { name: 'Entregue la tablet a la persona' })).toBeVisible()
-  await usuario.click(screen.getByRole('button', { name: 'Ya tengo la tablet' }))
+  expect(
+    screen.getByRole('heading', { name: 'Entregue el dispositivo a la persona' }),
+  ).toBeVisible()
+  await usuario.click(screen.getByRole('button', { name: 'Ya tengo el dispositivo' }))
 }
 
 async function responder(usuario: ReturnType<typeof userEvent.setup>, opcion: string) {
@@ -100,6 +102,35 @@ describe('Vista paciente', () => {
     expect(screen.getByText('Pregunta 2')).toBeVisible()
   })
 
+  it('P2: elegir una zona no la envía; se puede cambiar, borrar y luego revisar', async () => {
+    const recursos = recursosReales()
+    const usuario = mostrar(recursos)
+    await empezar(usuario, recursos)
+    await responder(usuario, 'Dolor')
+
+    const revisar = screen.getByRole('button', { name: /Revisar respuesta/ })
+    expect(revisar).toBeDisabled()
+
+    await usuario.click(screen.getByRole('button', { name: 'Pecho' }))
+    expect(screen.getByRole('button', { name: 'Pecho' })).toHaveAttribute('aria-pressed', 'true')
+    expect(recursos.consulta.getState().provisional).toBeNull()
+
+    await usuario.click(screen.getByRole('button', { name: 'Espalda' }))
+    expect(screen.getByRole('button', { name: 'Pecho' })).toHaveAttribute('aria-pressed', 'false')
+
+    await usuario.click(screen.getByRole('button', { name: /Borrar selección/ }))
+    expect(revisar).toBeDisabled()
+
+    await usuario.click(screen.getByRole('button', { name: 'Brazos' }))
+    await usuario.click(revisar)
+    expect(recursos.consulta.getState().provisional).toMatchObject({
+      preguntaId: 'P2',
+      valor: 'BRAZOS',
+      origen: 'cuerpo',
+    })
+    expect(screen.getByRole('region', { name: 'Confirmar respuesta' })).toHaveTextContent('Brazos')
+  })
+
   it('recorre las 6 preguntas por toque y entrega la tablet al profesional', async () => {
     const recursos = recursosReales()
     const usuario = mostrar(recursos)
@@ -108,7 +139,9 @@ describe('Vista paciente', () => {
     expect(screen.getByRole('heading', { name: '¿Qué sientes?' })).toBeVisible()
     await responder(usuario, 'Dolor')
     expect(screen.getByRole('heading', { name: '¿Dónde te duele?' })).toBeVisible()
-    await responder(usuario, 'Cabeza')
+    await usuario.click(screen.getByRole('button', { name: 'Cabeza' }))
+    await usuario.click(screen.getByRole('button', { name: /Revisar respuesta/ }))
+    await usuario.click(screen.getByRole('button', { name: 'Sí, es correcto' }))
     expect(screen.getByRole('heading', { name: '¿Desde cuándo?' })).toBeVisible()
     await responder(usuario, 'Hoy')
     expect(screen.getByRole('heading', { name: '¿Qué tan fuerte es?' })).toBeVisible()
@@ -118,7 +151,9 @@ describe('Vista paciente', () => {
     expect(screen.getByRole('heading', { name: '¿Estás embarazada?' })).toBeVisible()
     await responder(usuario, 'No sé')
 
-    expect(screen.getByRole('heading', { name: 'Entregue la tablet al profesional' })).toBeVisible()
+    expect(
+      screen.getByRole('heading', { name: 'Entregue el dispositivo al profesional' }),
+    ).toBeVisible()
     const respuestas = recursos.consulta.getState().respuestas
     expect(respuestas.map((r) => [r.preguntaId, r.valor, r.origen])).toEqual([
       ['P1', 'DOLOR', 'tactil'],
@@ -201,6 +236,6 @@ describe('Vista paciente', () => {
   it('con un banco inválido muestra los errores y no permite iniciar', () => {
     mostrar({ ok: false, errores: ['P2 › video: requerido'], modoDemo: false })
     expect(screen.getByRole('alert')).toHaveTextContent('P2 › video: requerido')
-    expect(screen.queryByRole('button', { name: 'Ya tengo la tablet' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Ya tengo el dispositivo' })).toBeNull()
   })
 })

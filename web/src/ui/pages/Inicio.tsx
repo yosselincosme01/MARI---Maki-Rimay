@@ -22,9 +22,9 @@ export function Inicio() {
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-2 text-center">
-          <h1 className="text-3xl sm:text-4xl">¿Quién usa la tablet?</h1>
+          <h1 className="text-3xl sm:text-4xl">¿Quién usa el dispositivo?</h1>
           <p className="text-tinta-suave text-lg">
-            El profesional inicia la consulta y luego entrega la tablet a la persona.
+            El profesional inicia la consulta y luego entrega el dispositivo a la persona.
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export function Inicio() {
             <Contenido
               icono={<Hand size={32} strokeWidth={1.75} aria-hidden />}
               titulo="Empezar como paciente"
-              texto="Si el profesional ya te entregó la tablet."
+              texto="Si el profesional ya te entregó el dispositivo."
             />
           </Link>
         </nav>

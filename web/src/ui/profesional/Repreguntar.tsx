@@ -176,7 +176,7 @@ export function Repreguntar({ buscador, alCancelar, alEnviar }: RepreguntarProps
           <span className="text-tinta-suave flex items-center gap-2 text-sm">
             {elegida ? (
               <>
-                <Check size={16} className="text-cruz" aria-hidden /> Luego entrega la tablet.
+                <Check size={16} className="text-cruz" aria-hidden /> Luego entrega el dispositivo.
               </>
             ) : (
               <>

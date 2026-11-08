@@ -1,9 +1,10 @@
-import { Check, CircleHelp, PersonStanding, X } from 'lucide-react'
+import { Check, CircleHelp, X } from 'lucide-react'
 import type { Pregunta, RespuestaProvisional } from '@/domain/banco/tipos'
 import { Boton } from '@/ui/components/base/Boton'
 import { tarjeta } from '@/ui/components/base/estilos'
 import { etiquetaDe, opcionDe, urlPublica } from '@/ui/consulta/recursos'
-import { Barras } from './Respuestas'
+import { Simbolo } from './simbolos/Simbolo'
+import { simboloDe } from './simbolos/simbolos'
 
 interface ConfirmacionProps {
   pregunta: Pregunta
@@ -52,10 +53,11 @@ export function Confirmacion({
 
 const botonDecision = 'h-auto min-h-28 flex-col gap-2 px-3 py-4 text-lg whitespace-normal'
 
+/** Lo que MARI entendió, con el mismo símbolo que la opción elegida (o el video de la seña). */
 function LoEntendido({ pregunta, valor }: { pregunta: Pregunta; valor: string }) {
   const opcion = opcionDe(pregunta, valor)
   const etiqueta = etiquetaDe(pregunta, valor)
-  const posicion = pregunta.opciones.findIndex((o) => o.valor === valor)
+  const simbolo = simboloDe(pregunta, valor)
 
   return (
     <figure className="flex min-w-44 flex-col items-center gap-3">
@@ -70,12 +72,8 @@ function LoEntendido({ pregunta, valor }: { pregunta: Pregunta; valor: string })
             playsInline
             aria-hidden
           />
-        ) : opcion?.pictograma ? (
-          <img src={urlPublica(opcion.pictograma)} alt="" className="size-32 object-contain" />
-        ) : pregunta.tipo === 'escala' && posicion >= 0 ? (
-          <Barras llenas={posicion + 1} total={pregunta.opciones.length} />
-        ) : pregunta.tipo === 'cuerpo' && opcion ? (
-          <PersonStanding size={72} strokeWidth={1.5} aria-hidden className="text-marca" />
+        ) : simbolo ? (
+          <Simbolo simbolo={simbolo} tamano="lg" />
         ) : (
           <CircleHelp size={64} strokeWidth={1.5} aria-hidden className="text-tinta-suave" />
         )}

@@ -89,7 +89,7 @@ describe('Vista profesional (PRO)', () => {
     // P1 Dolor → P2 abdomen inferior → P3 ayer → P4 fuerte → P7 no → fin. P5 aún no está en el banco.
     responderTodo(consulta, ['DOLOR', 'ABDOMEN_INFERIOR', 'AYER', 'FUERTE', 'NO'])
     expect(await screen.findByText('La persona terminó de responder')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Recibir la tablet' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Recibir el dispositivo' }))
 
     expect(screen.getByRole('heading', { name: 'Revisión de respuestas' })).toBeInTheDocument()
     const sintoma = screen.getByText(
@@ -189,7 +189,7 @@ describe('Vista profesional (PRO)', () => {
     responderTodo(consulta, ['SI'])
     expect(await screen.findByRole('alert')).toHaveTextContent(/dificultad para respirar/)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tomar la tablet' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Tomar el dispositivo' }))
     expect(consulta.getState().fase).toBe('profesional')
     expect(screen.getByText('Sí: avisar al personal')).toBeInTheDocument()
   })

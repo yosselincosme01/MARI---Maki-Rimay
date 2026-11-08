@@ -130,7 +130,7 @@ function IniciarConsulta() {
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl">Nueva consulta</h1>
             <p className="text-tinta-suave">
-              Configura la consulta y entrega la tablet a la persona.
+              Configura la consulta y entrega el dispositivo a la persona.
             </p>
           </div>
           <label className="border-borde hover:border-marca has-[:checked]:border-marca has-[:checked]:bg-marca-suave flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border p-4 transition-colors">
@@ -167,7 +167,7 @@ function ConLaPersona() {
       <PanelAviso
         icono={<Hand size={44} strokeWidth={1.75} aria-hidden />}
         titulo="La persona está respondiendo"
-        texto="Las respuestas aparecerán aquí cuando te devuelva la tablet."
+        texto="Las respuestas aparecerán aquí cuando te devuelva el dispositivo."
       >
         <Link to="/paciente" className={estilosBoton({ variante: 'secundario', tamano: 'lg' })}>
           Ir a la vista de la persona
@@ -197,7 +197,7 @@ function AlertaRecibida() {
             recibirTablet()
           }}
         >
-          Tomar la tablet
+          Tomar el dispositivo
         </Boton>
       </PanelAviso>
     </Marco>
@@ -213,7 +213,7 @@ function RecibirTablet() {
         titulo="La persona terminó de responder"
       >
         <Boton tamano="xl" ancho="completo" onClick={recibirTablet}>
-          Recibir la tablet
+          Recibir el dispositivo
         </Boton>
       </PanelAviso>
     </Marco>

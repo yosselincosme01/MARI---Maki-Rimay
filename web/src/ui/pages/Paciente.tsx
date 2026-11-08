@@ -46,7 +46,7 @@ function FlujoPaciente() {
         <Aviso
           icono={<TabletSmartphone size={44} strokeWidth={1.75} aria-hidden />}
           titulo="No hay una consulta en curso"
-          texto="El profesional inicia la consulta desde su vista y te entrega la tablet."
+          texto="El profesional inicia la consulta desde su vista y te entrega el dispositivo."
         >
           <Link to="/app" className={estilosBoton({ variante: 'secundario', tamano: 'lg' })}>
             Volver al inicio
@@ -57,11 +57,11 @@ function FlujoPaciente() {
       return (
         <Aviso
           icono={<Hand size={44} strokeWidth={1.75} aria-hidden />}
-          titulo="Entregue la tablet a la persona"
+          titulo="Entregue el dispositivo a la persona"
           texto="Las preguntas aparecerán en Lengua de Señas Peruana."
         >
           <Boton tamano="xl" ancho="completo" onClick={consulta.recibirTablet}>
-            Ya tengo la tablet
+            Ya tengo el dispositivo
           </Boton>
         </Aviso>
       )
@@ -74,7 +74,7 @@ function FlujoPaciente() {
       return (
         <Aviso
           icono={<Stethoscope size={44} strokeWidth={1.75} aria-hidden />}
-          titulo="Entregue la tablet al profesional"
+          titulo="Entregue el dispositivo al profesional"
           texto="Terminaste. Gracias por tus respuestas."
         >
           <Boton
@@ -94,7 +94,7 @@ function FlujoPaciente() {
       return (
         <Aviso
           icono={<Stethoscope size={44} strokeWidth={1.75} aria-hidden />}
-          titulo="La tablet la tiene el profesional"
+          titulo="El profesional tiene el dispositivo"
         >
           <Link
             to="/profesional"
