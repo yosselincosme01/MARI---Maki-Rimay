@@ -118,6 +118,3 @@ export async function crearExtractor(): Promise<Extractor> {
     },
   }
 }
-
-/** Conexiones entre los 21 puntos de una mano, para dibujarla. */
-export const CONEXIONES_MANO = HandLandmarker.HAND_CONNECTIONS

@@ -1,6 +1,7 @@
+import type { FotogramaCrudo } from '@/domain/senas/normalizar'
 import type { Deteccion, EstadoCamara, Inferencia } from './tipos'
 
-/** Reconocimiento de señas (contrato §5.1). Emmy implementa; Yosselin consume en la vista paciente. */
+/** Reconocimiento de señas (contrato §5.1). Emmy implementa y consume en la vista paciente. */
 export interface Reconocedor {
   /** Pide la cámara (sin audio) y empieza a inferir. Solo al pulsar "Activar cámara". */
   iniciar(video: HTMLVideoElement): Promise<void>
@@ -10,6 +11,11 @@ export interface Reconocedor {
   alCambiarEstado(cb: (estado: EstadoCamara) => void): () => void
   /** Inferencias crudas. Quien consume aplica decidirSena (§5.3). */
   alInferir(cb: (inferencia: Inferencia) => void): () => void
+  /**
+   * Opcional: los puntos de cada fotograma, para dibujarlos sobre la cámara.
+   * Un adaptador que no los tenga simplemente no lo implementa.
+   */
+  alFotograma?(cb: (fotograma: FotogramaCrudo) => void): () => void
   /** Mensaje libre: recorre la grabación con ventana deslizante y aplica decidirSena. */
   detectarEnGrabacion(grabacion: Blob): Promise<Deteccion[]>
 }

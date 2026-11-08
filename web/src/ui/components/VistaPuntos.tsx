@@ -7,8 +7,9 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Camera, CameraOff, LoaderCircle } from 'lucide-react'
-import { PUNTOS_POSE, type FotogramaCrudo, type Punto } from '@/domain/senas/normalizar'
-import { CONEXIONES_MANO, crearExtractor, type Extractor } from '@/infrastructure/senas/extractor'
+import type { FotogramaCrudo } from '@/domain/senas/normalizar'
+import { crearExtractor, type Extractor } from '@/infrastructure/senas/extractor'
+import { dibujarPuntos } from '@/ui/senas/dibujo'
 
 type Estado =
   | { tipo: 'apagada' }
@@ -187,59 +188,6 @@ export function VistaPuntos({ alFotograma, alListo, superposicion }: VistaPuntos
       )}
     </section>
   )
-}
-
-/** Dibuja manos y pose sobre el lienzo, en coordenadas de la imagen. */
-function dibujarPuntos(c: HTMLCanvasElement, f: FotogramaCrudo, ancho: number, alto: number) {
-  const ctx = c.getContext('2d')
-  if (!ctx) return
-  c.width = ancho
-  c.height = alto
-  ctx.clearRect(0, 0, ancho, alto)
-  const px = (p: Punto) => [p.x * ancho, p.y * alto] as const
-
-  const mano = (puntos: readonly Punto[] | null, color: string) => {
-    if (!puntos) return
-    ctx.strokeStyle = color
-    ctx.lineWidth = 3
-    for (const { start, end } of CONEXIONES_MANO) {
-      const a = puntos[start]
-      const b = puntos[end]
-      if (!a || !b) continue
-      ctx.beginPath()
-      ctx.moveTo(...px(a))
-      ctx.lineTo(...px(b))
-      ctx.stroke()
-    }
-    ctx.fillStyle = color
-    for (const p of puntos) {
-      ctx.beginPath()
-      ctx.arc(...px(p), 4, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }
-
-  if (f.pose) {
-    const puntos = PUNTOS_POSE.map(({ indice }) => f.pose?.[indice])
-    ctx.fillStyle = '#ffffff'
-    for (const p of puntos) {
-      if (!p) continue
-      ctx.beginPath()
-      ctx.arc(...px(p), 6, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    const [izq, der] = [f.pose[11], f.pose[12]]
-    if (izq && der) {
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(...px(izq))
-      ctx.lineTo(...px(der))
-      ctx.stroke()
-    }
-  }
-  mano(f.manoDerecha, '#07817e')
-  mano(f.manoIzquierda, '#f4a86a')
 }
 
 function Indicador({
