@@ -29,3 +29,6 @@ coverage
 # Datos sensibles: nunca versionar grabaciones crudas ni datos de pacientes
 *.webm
 grabaciones/
+
+# MediaPipe: se recrea con "npm run mediapipe" (wasm de node_modules + modelos verificados)
+public/mediapipe/
