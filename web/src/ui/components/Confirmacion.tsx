@@ -1,5 +1,7 @@
-import { Check, CircleHelp, X } from 'lucide-react'
+import { Check, CircleHelp, PersonStanding, X } from 'lucide-react'
 import type { Pregunta, RespuestaProvisional } from '@/domain/banco/tipos'
+import { Boton } from '@/ui/components/base/Boton'
+import { tarjeta } from '@/ui/components/base/estilos'
 import { etiquetaDe, opcionDe, urlPublica } from '@/ui/consulta/recursos'
 import { Barras } from './Respuestas'
 
@@ -16,7 +18,7 @@ interface ConfirmacionProps {
  * - ✓ guarda la respuesta y avanza. Un segundo toque no hace nada: la consulta ya no tiene
  *   provisional (CON3).
  * - ✗ la descarta y vuelve a las opciones.
- * ✓ y ✗ se distinguen por forma, color y nombre accesible (CON2).
+ * ✓ y ✗ se distinguen por forma, color e ícono, y su texto es también su nombre accesible (CON2).
  */
 export function Confirmacion({
   pregunta,
@@ -26,35 +28,29 @@ export function Confirmacion({
 }: ConfirmacionProps) {
   const valores = Array.isArray(provisional.valor) ? provisional.valor : [provisional.valor]
   return (
-    <section aria-label="Confirmar respuesta" className="flex flex-col items-center gap-6">
-      <ul className="flex flex-wrap justify-center gap-3">
+    <section aria-label="Confirmar respuesta" className={`${tarjeta} flex flex-col gap-6 p-6`}>
+      <h2 className="text-center text-xl">¿Es correcto?</h2>
+      <ul className="flex flex-wrap justify-center gap-4">
         {valores.map((valor) => (
           <li key={valor}>
             <LoEntendido pregunta={pregunta} valor={valor} />
           </li>
         ))}
       </ul>
-      <div className="grid w-full grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={alConfirmar}
-          aria-label="Sí, es eso"
-          className="bg-cruz grid h-24 place-items-center rounded-3xl text-white shadow-md"
-        >
-          <Check size={56} strokeWidth={3} aria-hidden />
-        </button>
-        <button
-          type="button"
-          onClick={alDescartar}
-          aria-label="No, cambiar"
-          className="bg-superficie text-alerta grid h-24 place-items-center rounded-3xl ring-2 ring-black/10"
-        >
-          <X size={56} strokeWidth={3} aria-hidden />
-        </button>
+      <div className="grid grid-cols-2 gap-3">
+        {/* Ícono grande arriba y texto debajo: se entiende sin leer y el texto siempre cabe. */}
+        <Boton variante="exito" tamano="xl" className={botonDecision} onClick={alConfirmar}>
+          <Check size={40} strokeWidth={2.5} aria-hidden /> Sí, es correcto
+        </Boton>
+        <Boton variante="secundario" tamano="xl" className={botonDecision} onClick={alDescartar}>
+          <X size={40} strokeWidth={2.5} aria-hidden className="text-alerta" /> No, cambiar
+        </Boton>
       </div>
     </section>
   )
 }
+
+const botonDecision = 'h-auto min-h-28 flex-col gap-2 px-3 py-4 text-lg whitespace-normal'
 
 function LoEntendido({ pregunta, valor }: { pregunta: Pregunta; valor: string }) {
   const opcion = opcionDe(pregunta, valor)
@@ -62,25 +58,29 @@ function LoEntendido({ pregunta, valor }: { pregunta: Pregunta; valor: string })
   const posicion = pregunta.opciones.findIndex((o) => o.valor === valor)
 
   return (
-    <figure className="bg-superficie flex min-w-40 flex-col items-center gap-3 rounded-3xl p-5 shadow-md ring-1 ring-black/5">
-      {opcion?.videoRespuesta ? (
-        <video
-          src={urlPublica(opcion.videoRespuesta)}
-          className="size-40 rounded-2xl object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          aria-hidden
-        />
-      ) : opcion?.pictograma ? (
-        <img src={urlPublica(opcion.pictograma)} alt="" className="size-40 object-contain" />
-      ) : pregunta.tipo === 'escala' && posicion >= 0 ? (
-        <Barras llenas={posicion + 1} total={pregunta.opciones.length} />
-      ) : !opcion ? (
-        <CircleHelp size={72} aria-hidden className="text-tinta/60" />
-      ) : null}
-      <figcaption className="text-2xl font-bold">{etiqueta}</figcaption>
+    <figure className="flex min-w-44 flex-col items-center gap-3">
+      <div className="bg-marca-suave grid size-40 place-items-center rounded-2xl">
+        {opcion?.videoRespuesta ? (
+          <video
+            src={urlPublica(opcion.videoRespuesta)}
+            className="size-40 rounded-2xl object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-hidden
+          />
+        ) : opcion?.pictograma ? (
+          <img src={urlPublica(opcion.pictograma)} alt="" className="size-32 object-contain" />
+        ) : pregunta.tipo === 'escala' && posicion >= 0 ? (
+          <Barras llenas={posicion + 1} total={pregunta.opciones.length} />
+        ) : pregunta.tipo === 'cuerpo' && opcion ? (
+          <PersonStanding size={72} strokeWidth={1.5} aria-hidden className="text-marca" />
+        ) : (
+          <CircleHelp size={64} strokeWidth={1.5} aria-hidden className="text-tinta-suave" />
+        )}
+      </div>
+      <figcaption className="font-display text-2xl font-semibold">{etiqueta}</figcaption>
     </figure>
   )
 }

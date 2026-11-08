@@ -1,6 +1,17 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Hand, HandHelping, Siren, Stethoscope, TriangleAlert } from 'lucide-react'
+import {
+  Hand,
+  HandHelping,
+  Siren,
+  Stethoscope,
+  TabletSmartphone,
+  TriangleAlert,
+} from 'lucide-react'
+import { cn } from '@/ui/cn'
+import { Boton } from '@/ui/components/base/Boton'
+import { PanelAviso } from '@/ui/components/base/PanelAviso'
+import { estilosBoton, tarjeta } from '@/ui/components/base/estilos'
 import { Confirmacion } from '@/ui/components/Confirmacion'
 import { Logo } from '@/ui/components/Logo'
 import { Respuestas } from '@/ui/components/Respuestas'
@@ -24,15 +35,28 @@ function FlujoPaciente() {
 
   switch (consulta.fase) {
     case 'inactiva':
-      return <SinConsulta />
+      return (
+        <Aviso
+          icono={<TabletSmartphone size={44} strokeWidth={1.75} aria-hidden />}
+          titulo="No hay una consulta en curso"
+          texto="El profesional inicia la consulta desde su vista y te entrega la tablet."
+        >
+          <Link to="/app" className={estilosBoton({ variante: 'secundario', tamano: 'lg' })}>
+            Volver al inicio
+          </Link>
+        </Aviso>
+      )
     case 'entrega-paciente':
       return (
-        <Entrega
-          icono={<Hand size={96} aria-hidden />}
+        <Aviso
+          icono={<Hand size={44} strokeWidth={1.75} aria-hidden />}
           titulo="Entregue la tablet a la persona"
-          accion="Ya tengo la tablet"
-          alRecibir={consulta.recibirTablet}
-        />
+          texto="Las preguntas aparecerán en Lengua de Señas Peruana."
+        >
+          <Boton tamano="xl" ancho="completo" onClick={consulta.recibirTablet}>
+            Ya tengo la tablet
+          </Boton>
+        </Aviso>
       )
     case 'paciente':
     case 'repregunta':
@@ -41,41 +65,71 @@ function FlujoPaciente() {
       return <Alerta alEntregar={consulta.entregarAlProfesional} />
     case 'entrega-profesional':
       return (
-        <Entrega
-          icono={<Stethoscope size={96} aria-hidden />}
+        <Aviso
+          icono={<Stethoscope size={44} strokeWidth={1.75} aria-hidden />}
           titulo="Entregue la tablet al profesional"
-          accion="Soy el profesional"
-          alRecibir={() => {
-            consulta.recibirTablet()
-            void navegar('/profesional')
-          }}
-        />
+          texto="Terminaste. Gracias por tus respuestas."
+        >
+          <Boton
+            tamano="xl"
+            ancho="completo"
+            onClick={() => {
+              consulta.recibirTablet()
+              void navegar('/profesional')
+            }}
+          >
+            Soy el profesional
+          </Boton>
+        </Aviso>
       )
     case 'profesional':
     case 'resumen':
-      return <ConElProfesional />
+      return (
+        <Aviso
+          icono={<Stethoscope size={44} strokeWidth={1.75} aria-hidden />}
+          titulo="La tablet la tiene el profesional"
+        >
+          <Link
+            to="/profesional"
+            className={estilosBoton({ variante: 'secundario', tamano: 'lg' })}
+          >
+            Ir a la vista del profesional
+          </Link>
+        </Aviso>
+      )
   }
 }
 
-function Marco({ children }: { children: ReactNode }) {
+/** Estructura de la vista: barra superior fija y contenido centrado. */
+function Marco({ children, contexto }: { children: ReactNode; contexto?: ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-6 p-4 sm:p-6">
-      <Logo className="h-10 w-auto self-start" />
-      {children}
-    </main>
+    <div className="flex min-h-dvh flex-col">
+      <header className="border-borde bg-superficie/90 sticky top-0 z-20 border-b backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Logo className="h-9 w-auto" />
+          {contexto}
+        </div>
+      </header>
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6 sm:px-6">
+        {children}
+      </main>
+    </div>
   )
 }
 
 function PreguntaActiva() {
   const banco = useBanco()
   const modoDemo = useModoDemo()
-  const { preguntaActiva, provisional, proponer, confirmar, descartar } = useConsulta()
+  const { fase, preguntaActiva, provisional, respuestas, proponer, confirmar, descartar } =
+    useConsulta()
   const pregunta = banco.preguntas.find((p) => p.id === preguntaActiva)
+  const esRepregunta = fase === 'repregunta'
+  const numero = respuestas.filter((r) => !r.repregunta).length + 1
 
   if (!pregunta) {
     return (
       <Marco>
-        <p role="alert" className="text-alerta text-lg font-semibold">
+        <p role="alert" className="text-alerta font-semibold">
           La pregunta {preguntaActiva} no está en el banco.
         </p>
       </Marco>
@@ -83,10 +137,19 @@ function PreguntaActiva() {
   }
 
   return (
-    <Marco>
+    <Marco
+      contexto={
+        <span className="bg-marca-suave text-marca-oscuro rounded-full px-3 py-1 text-sm font-semibold">
+          {esRepregunta ? 'Pregunta del profesional' : `Pregunta ${numero}`}
+        </span>
+      }
+    >
       {/* Tablet horizontal: video | respuesta. En móvil se apilan (PAC3). */}
-      <div className="grid flex-1 items-start gap-6 md:grid-cols-2">
-        <section aria-labelledby="pregunta" className="flex flex-col gap-3">
+      <div className="grid flex-1 items-start gap-6 md:grid-cols-2 lg:gap-10">
+        <section aria-labelledby="pregunta" className="flex flex-col gap-4">
+          <h1 id="pregunta" className="text-2xl sm:text-3xl">
+            {pregunta.texto}
+          </h1>
           <VideoLSP
             key={pregunta.id}
             video={pregunta.video}
@@ -94,11 +157,8 @@ function PreguntaActiva() {
             texto={pregunta.texto}
             modoDemo={modoDemo}
           />
-          <h1 id="pregunta" className="text-2xl font-bold sm:text-3xl">
-            {pregunta.texto}
-          </h1>
         </section>
-        <section aria-label="Tu respuesta">
+        <section aria-label="Tu respuesta" className="flex flex-col gap-4 md:pt-12">
           {provisional ? (
             <Confirmacion
               pregunta={pregunta}
@@ -115,32 +175,11 @@ function PreguntaActiva() {
   )
 }
 
-function Entrega({
-  icono,
-  titulo,
-  accion,
-  alRecibir,
-}: {
-  icono: ReactNode
-  titulo: string
-  accion: string
-  alRecibir: () => void
-}) {
+/** Pantalla centrada dentro de la estructura de la vista paciente. */
+function Aviso(props: Parameters<typeof PanelAviso>[0]) {
   return (
     <Marco>
-      <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center">
-        <div className="bg-marca grid size-44 place-items-center rounded-full text-white shadow-lg">
-          {icono}
-        </div>
-        <h1 className="text-3xl font-bold sm:text-4xl">{titulo}</h1>
-        <button
-          type="button"
-          onClick={alRecibir}
-          className="bg-marca rounded-boton min-h-16 w-full max-w-sm px-8 text-xl font-semibold text-white shadow-md"
-        >
-          {accion}
-        </button>
-      </section>
+      <PanelAviso {...props} />
     </Marco>
   )
 }
@@ -148,87 +187,30 @@ function Entrega({
 /** P0 = SÍ: el flujo se detiene. MARI no asigna prioridades (FLU1). */
 function Alerta({ alEntregar }: { alEntregar: () => void }) {
   return (
-    <Marco>
-      <section
-        role="alert"
-        className="flex flex-1 flex-col items-center justify-center gap-8 text-center"
-      >
-        <div className="bg-alerta grid size-44 place-items-center rounded-full text-white shadow-lg">
-          <Siren size={96} aria-hidden />
-        </div>
-        <h1 className="text-alerta text-4xl font-bold">Avisa al personal ahora</h1>
-        <div className="flex items-center gap-3 text-xl">
-          <HandHelping size={40} aria-hidden /> Levanta la mano o muestra esta pantalla.
-        </div>
-        <button
-          type="button"
-          onClick={alEntregar}
-          className="bg-superficie rounded-boton text-tinta min-h-14 px-8 font-semibold ring-2 ring-black/10"
-        >
-          Entregar al profesional
-        </button>
-      </section>
-    </Marco>
-  )
-}
-
-/**
- * Sin consulta. La inicia el profesional desde su vista (PRO, Emmy).
- * Mientras esa vista no exista, aquí hay un inicio de prueba para recorrer el flujo.
- */
-function SinConsulta() {
-  const { iniciarConsulta } = useConsulta()
-  const [preguntarEmbarazo, setPreguntarEmbarazo] = useState(false)
-  return (
-    <Marco>
-      <section className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6">
-        <h1 className="text-3xl font-bold">No hay una consulta en curso</h1>
-        <p className="text-tinta/80">El profesional inicia la consulta y entrega la tablet.</p>
-        <div className="bg-superficie flex flex-col gap-4 rounded-3xl p-5 ring-1 ring-black/10">
-          <p className="text-tinta/70 text-sm font-semibold uppercase">
-            Inicio de prueba (temporal)
-          </p>
-          <label className="flex min-h-12 items-center gap-3">
-            <input
-              type="checkbox"
-              className="accent-marca size-6"
-              checked={preguntarEmbarazo}
-              onChange={(e) => setPreguntarEmbarazo(e.target.checked)}
-            />
-            Preguntar por embarazo (P9)
-          </label>
-          <button
-            type="button"
-            onClick={() => iniciarConsulta({ preguntarEmbarazo })}
-            className="bg-marca rounded-boton min-h-14 font-semibold text-white"
-          >
-            Iniciar consulta
-          </button>
-        </div>
-      </section>
-    </Marco>
-  )
-}
-
-function ConElProfesional() {
-  return (
-    <Marco>
-      <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-        <Stethoscope size={72} aria-hidden className="text-marca" />
-        <h1 className="text-3xl font-bold">La tablet la tiene el profesional</h1>
-        <Link to="/profesional" className="text-marca text-lg font-semibold underline">
-          Ir a la vista del profesional
-        </Link>
-      </section>
-    </Marco>
+    <Aviso
+      rol="alert"
+      tono="alerta"
+      icono={<Siren size={44} strokeWidth={1.75} aria-hidden />}
+      titulo="Avisa al personal ahora"
+    >
+      <p className="text-tinta flex items-center gap-3 text-lg">
+        <HandHelping size={32} aria-hidden /> Levanta la mano o muestra esta pantalla.
+      </p>
+      <Boton variante="secundario" tamano="lg" ancho="completo" onClick={alEntregar}>
+        Entregar al profesional
+      </Boton>
+    </Aviso>
   )
 }
 
 function BancoInvalido({ errores }: { errores: string[] }) {
   return (
     <Marco>
-      <section role="alert" className="flex flex-col gap-4">
-        <h1 className="text-alerta flex items-center gap-2 text-2xl font-bold">
+      <section
+        role="alert"
+        className={cn(tarjeta, 'border-alerta/30 bg-alerta-suave flex flex-col gap-4 p-6')}
+      >
+        <h1 className="text-alerta flex items-center gap-2 text-2xl">
           <TriangleAlert aria-hidden /> El banco de preguntas tiene errores
         </h1>
         <p>No se puede iniciar una consulta hasta corregirlos:</p>

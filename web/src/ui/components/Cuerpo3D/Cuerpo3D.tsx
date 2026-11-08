@@ -90,11 +90,16 @@ export default function Cuerpo3D({ alTocar, alFallar }: Cuerpo3DProps) {
     const dibujar = () => renderer.render(escena, camara)
 
     const ajustarTamano = () => {
+      // Proporción 3:4, sin pasar del 58 % del alto de la pantalla (cabe en una tablet).
       const { width } = div.getBoundingClientRect()
-      const alto = (width * 4) / 3
-      renderer.setSize(width, alto, false)
-      renderer.domElement.style.width = '100%'
-      renderer.domElement.style.height = `${alto}px`
+      const alto = Math.min((width * 4) / 3, window.innerHeight * 0.58)
+      const ancho = (alto * 3) / 4
+      renderer.setSize(ancho, alto, false)
+      Object.assign(renderer.domElement.style, {
+        width: `${ancho}px`,
+        height: `${alto}px`,
+        margin: '0 auto',
+      })
       dibujar()
     }
     const observador = new ResizeObserver(ajustarTamano)
@@ -181,7 +186,20 @@ export default function Cuerpo3D({ alTocar, alFallar }: Cuerpo3DProps) {
   }, [])
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="rounded-tarjeta border-borde bg-superficie shadow-tarjeta relative overflow-hidden border">
+      {/* Control segmentado sobre el lienzo: ahorra alto en la tablet. */}
+      <div
+        role="group"
+        aria-label="Vista del cuerpo"
+        className="bg-superficie-2 absolute top-3 left-1/2 z-10 grid -translate-x-1/2 grid-cols-2 gap-1 rounded-xl p-1"
+      >
+        <BotonVista activo={!deEspalda} onClick={() => girar.current(0)}>
+          Frente
+        </BotonVista>
+        <BotonVista activo={deEspalda} onClick={() => girar.current(Math.PI)}>
+          Espalda
+        </BotonVista>
+      </div>
       <div
         ref={contenedor}
         role="img"
@@ -191,22 +209,17 @@ export default function Cuerpo3D({ alTocar, alFallar }: Cuerpo3DProps) {
           if (e.key === 'ArrowLeft') girar.current(-PASO_TECLADO, true)
           if (e.key === 'ArrowRight') girar.current(PASO_TECLADO, true)
         }}
-        className="bg-superficie relative w-full overflow-hidden rounded-3xl ring-1 ring-black/10"
+        className="relative min-h-80 w-full pt-16"
       >
         {cargando && (
-          <p className="text-tinta/70 absolute inset-0 grid place-items-center">
+          <p className="text-tinta-suave absolute inset-0 grid place-items-center">
             Cargando cuerpo 3D…
           </p>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <BotonVista activo={!deEspalda} onClick={() => girar.current(0)}>
-          Frente
-        </BotonVista>
-        <BotonVista activo={deEspalda} onClick={() => girar.current(Math.PI)}>
-          Espalda
-        </BotonVista>
-      </div>
+      <p className="text-tinta-suave pb-3 text-center text-sm">
+        Toca dónde te duele. Arrastra para girar.
+      </p>
     </div>
   )
 }
@@ -225,8 +238,8 @@ function BotonVista({
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`rounded-boton min-h-14 font-semibold ring-2 ${
-        activo ? 'bg-marca ring-marca text-white' : 'bg-superficie text-tinta ring-black/10'
+      className={`h-11 min-w-28 rounded-lg px-4 text-base font-semibold transition-colors ${
+        activo ? 'bg-superficie text-tinta shadow-tarjeta' : 'text-tinta-suave hover:text-tinta'
       }`}
     >
       {children}

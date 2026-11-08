@@ -8,23 +8,46 @@ html {
 }
 
 /*
- * Tokens de marca, tomados del logo de MARI.
- * Tailwind v4 convierte cada --color-* en clases: bg-marca, text-tinta, etc.
+ * Sistema visual de MARI: clínico, sobrio y accesible.
+ * - El verde azulado del logo es el acento; las superficies son blancas con bordes finos.
+ * - Colores con contraste AA sobre blanco (texto) y con blanco encima (botones).
+ * Tailwind v4 convierte cada --color-* en clases: bg-marca, text-tinta, border-borde, etc.
  */
 @theme {
-  --color-tinta: #15453f; /* texto principal, letras "M" y "RI" */
-  --color-marca: #07817e; /* verde azulado de la "A" */
-  --color-marca-oscuro: #097268; /* borde del monitor */
-  --color-cruz: #39a97e; /* cruz de salud: acciones de confirmación */
-  --color-marca-claro: #63b8a6;
-  --color-fondo: #f1f9f7;
+  /* Texto */
+  --color-tinta: #12302d; /* texto principal */
+  --color-tinta-suave: #4f625f; /* texto secundario, ayudas */
+
+  /* Marca (logo) */
+  --color-marca: #07817e; /* acción principal */
+  --color-marca-oscuro: #066663; /* hover y presionado */
+  --color-marca-suave: #e8f4f3; /* fondos de selección e íconos */
+  --color-marca-claro: #63b8a6; /* cuerpo 3D e ilustraciones */
+
+  /* Superficies */
+  --color-fondo: #f4f7f6;
   --color-superficie: #ffffff;
+  --color-superficie-2: #edf2f1; /* zonas hundidas: controles segmentados, marcadores */
+  --color-borde: #d6dfdd;
+
+  /* Estados */
+  --color-cruz: #1f7a56; /* confirmar ✓ */
   --color-alerta: #b42318; /* alerta inicial P0 */
+  --color-alerta-suave: #fdf2f1;
+  --color-aviso: #a3480a; /* avisos: video no validado */
+  --color-aviso-suave: #fff7ea;
 
   /* Fuentes servidas desde el propio proyecto: funcionan sin internet. */
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', system-ui, sans-serif;
-  --radius-boton: 1.25rem;
+
+  /* Radios: contenidos, no "de juguete". */
+  --radius-boton: 0.75rem;
+  --radius-tarjeta: 1rem;
+
+  /* Sombras apenas perceptibles: la jerarquía la dan los bordes y el espacio. */
+  --shadow-tarjeta: 0 1px 2px rgb(18 48 45 / 0.06), 0 1px 1px rgb(18 48 45 / 0.04);
+  --shadow-elevada: 0 8px 24px -8px rgb(18 48 45 / 0.18);
 }
 
 /* Barra de progreso de la grabación en /recolector. */
@@ -48,14 +71,17 @@ html {
   h1,
   h2,
   h3 {
-    @apply font-display;
-    letter-spacing: -0.02em;
-    word-spacing: 0.08em; /* Plus Jakarta junta mucho las palabras en tamaños grandes */
+    @apply font-display font-semibold;
+    letter-spacing: -0.015em;
+    word-spacing: 0.06em; /* Plus Jakarta junta mucho las palabras en tamaños grandes */
     text-wrap: balance;
+  }
+  ::selection {
+    @apply bg-marca-suave text-tinta;
   }
   /* Foco siempre visible para navegación con teclado. */
   :focus-visible {
-    @apply outline-marca outline-4 outline-offset-2;
+    @apply outline-marca outline-3 outline-offset-2;
   }
   @media (prefers-reduced-motion: reduce) {
     *,

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Pause, Play, RotateCcw, TriangleAlert, VideoOff } from 'lucide-react'
+import { Boton } from '@/ui/components/base/Boton'
 import { urlPublica } from '@/ui/consulta/recursos'
 
 interface VideoLSPProps {
@@ -66,7 +67,7 @@ function Reproductor({
 
   return (
     <figure className="flex flex-col gap-3">
-      <div className="bg-tinta relative overflow-hidden rounded-3xl">
+      <div className="rounded-tarjeta shadow-tarjeta relative overflow-hidden bg-[#0d1f1d]">
         <video
           ref={ref}
           src={urlPublica(video)}
@@ -81,27 +82,19 @@ function Reproductor({
           onError={alFallar}
         />
         {noValidado && (
-          <span className="bg-alerta absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold text-white shadow">
-            <TriangleAlert size={16} aria-hidden /> Video no validado
+          <span className="bg-aviso-suave text-aviso border-aviso/30 absolute top-3 left-3 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold">
+            <TriangleAlert size={14} aria-hidden /> Video no validado
           </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={alternar}
-          className="bg-superficie text-tinta rounded-boton flex min-h-14 items-center justify-center gap-2 font-semibold shadow-sm ring-1 ring-black/10"
-        >
-          {reproduciendo ? <Pause size={28} aria-hidden /> : <Play size={28} aria-hidden />}
+        <Boton variante="secundario" tamano="md" onClick={alternar}>
+          {reproduciendo ? <Pause size={20} aria-hidden /> : <Play size={20} aria-hidden />}
           {reproduciendo ? 'Pausar' : 'Reproducir'}
-        </button>
-        <button
-          type="button"
-          onClick={repetir}
-          className="bg-marca rounded-boton flex min-h-14 items-center justify-center gap-2 font-semibold text-white shadow-sm"
-        >
-          <RotateCcw size={28} aria-hidden /> Repetir
-        </button>
+        </Boton>
+        <Boton variante="secundario" tamano="md" onClick={repetir}>
+          <RotateCcw size={20} aria-hidden /> Repetir
+        </Boton>
       </div>
     </figure>
   )
@@ -112,10 +105,10 @@ function VideoPendiente({ texto }: { texto: string }) {
     <figure
       role="img"
       aria-label={`Video pendiente: ${texto}`}
-      className="bg-superficie text-tinta/70 border-marca-claro flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 rounded-3xl border-4 border-dashed p-6 text-center"
+      className="rounded-tarjeta border-borde bg-superficie-2 text-tinta-suave flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 border border-dashed p-6 text-center"
     >
-      <VideoOff size={56} aria-hidden />
-      <span className="text-lg font-semibold">Video pendiente</span>
+      <VideoOff size={40} strokeWidth={1.75} aria-hidden />
+      <span className="font-medium">Video pendiente</span>
     </figure>
   )
 }
