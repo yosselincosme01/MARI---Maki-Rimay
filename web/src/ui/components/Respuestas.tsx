@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
-import { Camera, Check, CircleHelp, List, PersonStanding } from 'lucide-react'
+import { Camera, Check, CircleHelp, Hand, List, PersonStanding } from 'lucide-react'
 import type { Opcion, Origen, Pregunta, RespuestaProvisional } from '@/domain/banco/tipos'
 import { VALOR_OTRA } from '@/domain/banco/esquema'
 import { cn } from '@/ui/cn'
@@ -33,6 +33,8 @@ function hayWebGL(): boolean {
 interface RespuestasProps {
   pregunta: Pregunta
   alResponder: (respuesta: RespuestaProvisional) => void
+  /** Hay cámara para responder con señas: las opciones táctiles son la alternativa. */
+  conCamara?: boolean
 }
 
 /**
@@ -43,7 +45,7 @@ interface RespuestasProps {
  * - "cuerpo": cuerpo 3D (CUE1), con la lista de zonas como respaldo y alternativa (CUE2).
  * La respuesta queda provisional: la persona la confirma después con ✓.
  */
-export function Respuestas({ pregunta, alResponder }: RespuestasProps) {
+export function Respuestas({ pregunta, alResponder, conCamara = false }: RespuestasProps) {
   const origen: Origen = pregunta.tipo === 'cuerpo' ? 'cuerpo' : 'tactil'
   const proponer = (valor: string | string[]) =>
     alResponder({ preguntaId: pregunta.id, valor, origen })
@@ -68,7 +70,15 @@ export function Respuestas({ pregunta, alResponder }: RespuestasProps) {
 
       {pregunta.tipo === 'sena' && (
         <p className="text-tinta-suave mt-1 flex items-center gap-2 text-sm">
-          <Camera size={16} aria-hidden /> Responder con señas estará disponible pronto.
+          {conCamara ? (
+            <>
+              <Hand size={16} aria-hidden /> O toca una opción.
+            </>
+          ) : (
+            <>
+              <Camera size={16} aria-hidden /> Responder con señas estará disponible pronto.
+            </>
+          )}
         </p>
       )}
     </div>

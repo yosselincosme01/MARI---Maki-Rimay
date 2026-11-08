@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { HandLandmarker } from '@mediapipe/tasks-vision'
+import { CONEXIONES_MANO } from '@/ui/senas/dibujo'
 import { asignarManos } from './extractor'
 
 const mano = (x: number) => Array.from({ length: 21 }, () => ({ x, y: 0.5, z: 0, visibility: 1 }))
@@ -28,5 +30,12 @@ describe('asignarManos', () => {
       manoIzquierda: null,
     })
     expect(asignarManos([mano(0.5)], ['Left']).manoIzquierda?.[0]).toEqual({ x: 0.5, y: 0.5, z: 0 })
+  })
+})
+
+describe('CONEXIONES_MANO', () => {
+  it('es la misma lista de uniones que trae MediaPipe', () => {
+    const mediapipe = HandLandmarker.HAND_CONNECTIONS.map(({ start, end }) => [start, end])
+    expect(CONEXIONES_MANO.map(({ start, end }) => [start, end])).toEqual(mediapipe)
   })
 })
